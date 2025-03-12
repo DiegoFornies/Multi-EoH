@@ -1,0 +1,5 @@
+Evolutionary Algorithms (EA)
+Simulated Annealing (SA)
+Ant Colony Optimization (ACO)
+Particle Swarm Optimization (PSO)
+Constraint Programming (CP)

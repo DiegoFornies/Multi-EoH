@@ -1,0 +1,4 @@
+Problem description: {problem_description}
+Heuristic seed: {heuristic_seed}
+Input specifications: {input_specifications}
+Output specifications: {output_specifications}
