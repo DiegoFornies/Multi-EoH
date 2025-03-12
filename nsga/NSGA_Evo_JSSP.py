@@ -1,47 +1,5 @@
-from abc import ABC, abstractmethod
-from prompts import prompt_reader as pr
-import llm
-import re
+from NSGA_Evo import NSGA_Evo
 
-class NSGA_Evo(ABC):
-    def __init__(self, problem_path, population_size):
-        self.problem_path = problem_path
-        self.promptManager = pr.PromptManager(problem_path = problem_path)
-        self.population = []
-        self.population_size = population_size
-
-    def init_population(self):
-        for n in range(self.population_size):
-            system_prompt, user_prompt = self.promptManager.get_initialization_prompt()
-            description, code = self.create_individual(system_prompt, user_prompt)
-            self.population.append({'Description' : description, 'Code': code, 'Evaluation': {}})
-
-    def create_individual(self, system_prompt, user_prompt):
-        encoded_ind = llm.ask(system_prompt, user_prompt)
-        description, code = self.decoded_individual(encoded_ind)
-        return (description, code)
-    
-    def decode_individual(self, encode_ind):
-        code_pattern = r'```python(.*?)```'
-        code_matches = re.findall(code_pattern, encode_ind, re.DOTALL)
-        description = re.sub(code_pattern, '', encode_ind).strip()
-        
-        return description, code_matches
-    
-    def evaluate_population(self):
-        for individual in self.population:
-            evaluation = self.evaluate_individual(individual)
-            individual['Evaluation'] = evaluation
-
-    @abstractmethod
-    def evaluate_individual(self): #return a dictionary of objective function values
-        pass
-
-    @abstractmethod
-    def get_individual_solution(self, individual):
-        pass
-
-    
 class NSGA_Evo_JSSP(NSGA_Evo):
     def __init__(self, problem_path, population_size):
         super().__init__(problem_path, population_size)
@@ -110,8 +68,3 @@ class NSGA_Evo_JSSP(NSGA_Evo):
                 end_time = operation['End Time']
                 makespan = max(makespan, end_time)
         return makespan
-
-
-nsga = NSGA_Evo('jssp', 10)
-nsga.init_population()
-print(nsga.population)
