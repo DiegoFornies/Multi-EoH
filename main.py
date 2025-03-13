@@ -4,5 +4,7 @@ NSGA = NSGA_Evo_JSSP('jssp', 1)
 
 NSGA.init_population()
 NSGA.evaluate_population()
-for i in range(1):
-    print(NSGA.population[i]['Evaluation'])
+
+NSGA.population[0]['Evaluation']
+
+#print(NSGA.Reader.get_initialization_prompt())

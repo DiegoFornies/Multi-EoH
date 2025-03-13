@@ -1,70 +1,83 @@
-The heuristic employs an Evolutionary Algorithm (EA) where an initial population of schedules is evolved through selection, crossover, and mutation to minimize makespan, reduce time between operations within a job, and balance machine load while respecting the constraints of operation order and machine assignment.
+The heuristic is based on Simulated Annealing (SA), where an initial solution is iteratively improved by making small changes to the job-machine assignments and evaluating their effect on the makespan, operation time, and machine load.
+
+Python Implementation:
 
 ```python
 import random
+import math
 
-def heuristic(input_data):
-    def calculate_makespan(schedule):
-        makespan = 0
-        for job, operations in schedule.items():
-            for operation in operations:
-                makespan = max(makespan, operation['End Time'])
-        return makespan
-
-    def mutate(schedule):
-        job = random.choice(list(schedule.keys()))
-        op_idx = random.randint(0, len(schedule[job]) - 1)
-        operation = schedule[job][op_idx]
-        new_machine = random.choice(input_data['jobs'][job][op_idx][0])
-        operation['Assigned Machine'] = str(new_machine + 1)
-        return schedule
-
-    def crossover(schedule1, schedule2):
-        crossover_point = random.randint(1, len(schedule1) - 1)
-        offspring = {}
-        for job in range(1, crossover_point + 1):
-            offspring[job] = schedule1[job]
-        for job in range(crossover_point + 1, len(schedule2) + 1):
-            offspring[job] = schedule2[job]
-        return offspring
-
-    def generate_initial_population():
-        population = []
-        for _ in range(10):
-            schedule = {}
-            for job, operations in input_data['jobs'].items():
-                job_schedule = []
-                current_time = 0
-                for op_idx, (machines, times) in enumerate(operations):
-                    assigned_machine = random.choice(machines)
-                    start_time = current_time
-                    end_time = start_time + times[machines.index(assigned_machine)]
+def heuristic(n_jobs, n_machines, jobs, initial_temperature=1000, cooling_rate=0.995, max_iterations=10000):
+    def calculate_makespan(solution):
+        machine_times = {i: 0 for i in range(1, n_machines + 1)}
+        for job in solution.values():
+            for op in job:
+                machine_times[op['Assigned Machine']] = max(machine_times[op['Assigned Machine']], op['End Time'])
+        return max(machine_times.values())
+    
+    def create_initial_solution():
+        solution = {}
+        for job_id, operations in jobs.items():
+            job_schedule = []
+            current_time = {i: 0 for i in range(1, n_machines + 1)}
+            for op_idx, (machines, times) in enumerate(operations):
+                min_start_time = min([current_time[m] for m in machines])
+                for m, time in zip(machines, times):
+                    start_time = max(min_start_time, current_time[m])
+                    end_time = start_time + time
                     job_schedule.append({
                         'Operation': op_idx + 1,
-                        'Assigned Machine': str(assigned_machine + 1),
+                        'Assigned Machine': m,
                         'Start Time': start_time,
                         'End Time': end_time,
-                        'Processing Time': times[machines.index(assigned_machine)]
+                        'Processing Time': time
                     })
-                    current_time = end_time
-                schedule[job] = job_schedule
-            population.append(schedule)
-        return population
-
-    population = generate_initial_population()
-    generations = 100
-    for _ in range(generations):
-        population = sorted(population, key=calculate_makespan)
-        new_population = population[:2]
-        while len(new_population) < len(population):
-            parent1, parent2 = random.sample(population[:5], 2)
-            offspring = crossover(parent1, parent2)
-            if random.random() < 0.1:
-                offspring = mutate(offspring)
-            new_population.append(offspring)
-        population = new_population
-
-    best_schedule = population[0]
-    return best_schedule
+                    current_time[m] = end_time
+            solution[job_id] = job_schedule
+        return solution
+    
+    def generate_neighbour(solution):
+        neighbour = solution.copy()
+        job_id = random.choice(list(neighbour.keys()))
+        operation_idx = random.choice(range(len(neighbour[job_id])))
+        operation = neighbour[job_id][operation_idx]
+        
+        # Randomly swap machine assignments for the operation
+        new_machine = random.choice([m for m in range(1, n_machines + 1) if m != operation['Assigned Machine']])
+        new_start_time = max([operation['Start Time'], neighbour[job_id][operation_idx]['Start Time']])
+        new_end_time = new_start_time + operation['Processing Time']
+        
+        operation['Assigned Machine'] = new_machine
+        operation['Start Time'] = new_start_time
+        operation['End Time'] = new_end_time
+        return neighbour
+    
+    def accept_move(current_makespan, neighbour_makespan, temperature):
+        if neighbour_makespan < current_makespan:
+            return True
+        else:
+            probability = math.exp((current_makespan - neighbour_makespan) / temperature)
+            return random.random() < probability
+    
+    solution = create_initial_solution()
+    current_makespan = calculate_makespan(solution)
+    best_solution = solution
+    best_makespan = current_makespan
+    temperature = initial_temperature
+    
+    for iteration in range(max_iterations):
+        neighbour = generate_neighbour(solution)
+        neighbour_makespan = calculate_makespan(neighbour)
+        
+        if accept_move(current_makespan, neighbour_makespan, temperature):
+            solution = neighbour
+            current_makespan = neighbour_makespan
+        
+        if current_makespan < best_makespan:
+            best_solution = solution
+            best_makespan = current_makespan
+        
+        temperature *= cooling_rate
+    
+    return best_solution
 
 ```

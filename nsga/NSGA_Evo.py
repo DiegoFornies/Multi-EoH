@@ -5,7 +5,7 @@ import random
 
 class NSGA_Evo(ABC):
     def __init__(self, problem_name, population_size, objective_functions):
-        self.promptManager = Reader(problem_name)
+        self.Reader = Reader(problem_name)
         self.population_size = population_size
         self.population = []
         self.LLMManager = LLMManager()
@@ -18,13 +18,13 @@ class NSGA_Evo(ABC):
             of_info['min_score'] = {}
             for name, _ in self.instances.items():
                 of_info['min_score'][name] = float('inf')
-                of_info['max_score'][name] = - float('inf')
+                of_info['max_score'][name] = float('-inf')
 
         return objective_functions
 
     def init_population(self):
         for n in range(self.population_size):
-            system_prompt, user_prompt = self.promptManager.get_initialization_prompt()
+            system_prompt, user_prompt = self.Reader.get_initialization_prompt()
             description, code = self.create_individual(system_prompt, user_prompt)
             self.population.append({'Description' : description, 'Code': code})
 
@@ -36,7 +36,6 @@ class NSGA_Evo(ABC):
         for individual in self.population:
             evaluation = self.evaluate_individual(individual)
             individual['Evaluation'] = evaluation
-            
         self.update_minmax_score()
         self.normalize_population()
         self.mean_population()
@@ -45,13 +44,12 @@ class NSGA_Evo(ABC):
         for of_name, of_info in self.of.items():
             for individual in self.population:
                 if not individual['Evaluation']:
-                    pass
+                    break
                 else:
                     for inst_name, inst_ev in individual['Evaluation'].items():
-                        print(of_info['min_score'][inst_name], inst_ev[of_name])
                         if of_info['min_score'][inst_name] > inst_ev[of_name]:
                             of_info['min_score'][inst_name] = inst_ev[of_name]
-                        elif of_info['max_score'][inst_name] < inst_ev[of_name]:
+                        if of_info['max_score'][inst_name] < inst_ev[of_name]:
                             of_info['max_score'][inst_name] = inst_ev[of_name]
     
     def normalize_population(self):
@@ -63,10 +61,13 @@ class NSGA_Evo(ABC):
                     for inst_name, inst_ev in individual['Evaluation'].items():
                         min = of_info['min_score'][inst_name]
                         max = of_info['max_score'][inst_name]
-
-                        value = inst_ev[of_name] == (max - inst_ev[of_name]) / (max - min)
+                        divisor = max - min
+                        if divisor == 0:
+                            divisor = 1 #solo se cumple si todos tienen el mismo fitness
+                        value = (max - inst_ev[of_name]) / divisor
                         if of_info['Objective'] == 'Maximize':
                             value = 1 - value
+
                         inst_ev[of_name] = value
     
     def mean_population(self):
@@ -107,7 +108,7 @@ class NSGA_Evo(ABC):
         return solutions
     
     def get_instances(self):
-        instances = self.promptManager.get_instances()
+        instances = self.Reader.get_instances()
         decoded_ins = {}
         for name, instance in instances.items():
             decoded_ins[name] = self.decode_instance(instance)
