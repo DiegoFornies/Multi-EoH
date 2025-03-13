@@ -3,4 +3,6 @@ class LLMClient:
         self.llm = ''
 
     def query(self, system_prompt, user_prompt):
-        return ''
+        with open('llm/prueba.txt', 'r') as f:
+            content = f.read()
+        return content

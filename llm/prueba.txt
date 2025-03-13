@@ -1,0 +1,70 @@
+The heuristic employs an Evolutionary Algorithm (EA) where an initial population of schedules is evolved through selection, crossover, and mutation to minimize makespan, reduce time between operations within a job, and balance machine load while respecting the constraints of operation order and machine assignment.
+
+```python
+import random
+
+def heuristic(input_data):
+    def calculate_makespan(schedule):
+        makespan = 0
+        for job, operations in schedule.items():
+            for operation in operations:
+                makespan = max(makespan, operation['End Time'])
+        return makespan
+
+    def mutate(schedule):
+        job = random.choice(list(schedule.keys()))
+        op_idx = random.randint(0, len(schedule[job]) - 1)
+        operation = schedule[job][op_idx]
+        new_machine = random.choice(input_data['jobs'][job][op_idx][0])
+        operation['Assigned Machine'] = str(new_machine + 1)
+        return schedule
+
+    def crossover(schedule1, schedule2):
+        crossover_point = random.randint(1, len(schedule1) - 1)
+        offspring = {}
+        for job in range(1, crossover_point + 1):
+            offspring[job] = schedule1[job]
+        for job in range(crossover_point + 1, len(schedule2) + 1):
+            offspring[job] = schedule2[job]
+        return offspring
+
+    def generate_initial_population():
+        population = []
+        for _ in range(10):
+            schedule = {}
+            for job, operations in input_data['jobs'].items():
+                job_schedule = []
+                current_time = 0
+                for op_idx, (machines, times) in enumerate(operations):
+                    assigned_machine = random.choice(machines)
+                    start_time = current_time
+                    end_time = start_time + times[machines.index(assigned_machine)]
+                    job_schedule.append({
+                        'Operation': op_idx + 1,
+                        'Assigned Machine': str(assigned_machine + 1),
+                        'Start Time': start_time,
+                        'End Time': end_time,
+                        'Processing Time': times[machines.index(assigned_machine)]
+                    })
+                    current_time = end_time
+                schedule[job] = job_schedule
+            population.append(schedule)
+        return population
+
+    population = generate_initial_population()
+    generations = 100
+    for _ in range(generations):
+        population = sorted(population, key=calculate_makespan)
+        new_population = population[:2]
+        while len(new_population) < len(population):
+            parent1, parent2 = random.sample(population[:5], 2)
+            offspring = crossover(parent1, parent2)
+            if random.random() < 0.1:
+                offspring = mutate(offspring)
+            new_population.append(offspring)
+        population = new_population
+
+    best_schedule = population[0]
+    return best_schedule
+
+```

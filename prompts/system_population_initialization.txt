@@ -5,3 +5,4 @@ Your output must include the following:
    - The function should be named as specified by the user.
    - The input and output should strictly adhere to the provided specifications.
    - The Python code should be enclosed in a code block, using ```python ... ```.
+Don't add any extra code, explanation or title.
