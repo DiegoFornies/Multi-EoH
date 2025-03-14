@@ -1,4 +1,4 @@
-def feasibility(instance, solution):
+def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje con los fallos si está mal.
     def operation_feasibility():
         for job, operations in solution.items():
             job_operations = instance['jobs'][job]
@@ -38,6 +38,14 @@ def feasibility(instance, solution):
                 if curr_op_start_time < prev_op_end_time:
                     return False
         return True
-    print(solution)
-    print(machine_feasibility(), operation_feasibility(), sequence_feasibility())
-    return machine_feasibility() and operation_feasibility() and sequence_feasibility()
+    
+    message = ''
+    if not machine_feasibility():
+        message += '\nThe heuristic does not ensure machine feasibility, as it allows multiple operations on the same machine, which is not possible.'
+    if not operation_feasibility():
+        message += '\nThe heuristic does not ensure operation feasibility, as it assigns incorrect machines or processing times to operations.'
+    if not sequence_feasibility():
+        message += '\nThe heuristic does not ensure sequence feasibility, as some operations of the same job are performed simultaneously, or later operations are scheduled before earlier ones.'
+    if message == '':
+        return True
+    return message

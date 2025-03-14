@@ -1,16 +1,19 @@
 from abc import ABC, abstractmethod
 from reader import Reader
 from llm import LLMManager
+from utils import calculate_crowding_distance, calculate_distances_to_reference_vectors
+from nsga.Individual import Individual
 import random
 
 class NSGA_Evo(ABC):
-    def __init__(self, problem_name, population_size, objective_functions):
+    def __init__(self, problem_name, population_size, objective_functions, reference_vectors = ''):
         self.Reader = Reader(problem_name)
         self.population_size = population_size
         self.population = []
         self.LLMManager = LLMManager()
         self.instances = self.get_instances()
         self.of = self.init_objective_functions_info(objective_functions)
+        self.reference_vectors = reference_vectors
 
     def init_objective_functions_info(self, objective_functions):
         for of_name, of_info in objective_functions.items():
@@ -25,87 +28,30 @@ class NSGA_Evo(ABC):
     def init_population(self):
         for n in range(self.population_size):
             system_prompt, user_prompt = self.Reader.get_initialization_prompt()
-            description, code = self.create_individual(system_prompt, user_prompt)
-            self.population.append({'Description' : description, 'Code': code})
+            individual = self.create_individual(system_prompt, user_prompt)
+            self.population.append(individual)
 
     def create_individual(self, system_prompt, user_prompt):
         description, code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
-        return (description, code)
+        return Individual(description, code)
     
     def evaluate_population(self):
         for individual in self.population:
-            evaluation = self.evaluate_individual(individual)
-            individual['Evaluation'] = evaluation
+            feasible = individual.evaluate(self.instances, self.objective_functions, self.feasibility, self.of) #guarda la evaluación en individual y devuelve si es feasible o no
+            if not feasible:
+                self.population.remove(individual) #eliminamos los individuos que sean infeasibles
         self.update_minmax_score()
-        self.normalize_population()
-        self.mean_population()
+        self.normalize_and_mean_population()
 
     def update_minmax_score(self):
-        for of_name, of_info in self.of.items():
-            for individual in self.population:
-                if not individual['Evaluation']:
-                    break
-                else:
-                    for inst_name, inst_ev in individual['Evaluation'].items():
-                        if of_info['min_score'][inst_name] > inst_ev[of_name]:
-                            of_info['min_score'][inst_name] = inst_ev[of_name]
-                        if of_info['max_score'][inst_name] < inst_ev[of_name]:
-                            of_info['max_score'][inst_name] = inst_ev[of_name]
+        for individual in self.population:
+            self.of = individual.update_minmax(self.of)
     
-    def normalize_population(self):
-        for of_name, of_info in self.of.items():
-            for individual in self.population:
-                if not individual['Evaluation']:
-                    pass
-                else:
-                    for inst_name, inst_ev in individual['Evaluation'].items():
-                        min = of_info['min_score'][inst_name]
-                        max = of_info['max_score'][inst_name]
-                        divisor = max - min
-                        if divisor == 0:
-                            divisor = 1 #solo se cumple si todos tienen el mismo fitness
-                        value = (max - inst_ev[of_name]) / divisor
-                        if of_info['Objective'] == 'Maximize':
-                            value = 1 - value
-
-                        inst_ev[of_name] = value
-    
-    def mean_population(self):
+    def normalize_and_mean_population(self):
         num_instances = len(self.instances)
         for individual in self.population:
-                mean_evaluation = {}
-                if not individual['Evaluation']:
-                    pass
-                else:
-                    for of_name, of_info in self.of.items():
-                        sum = 0
-                        for inst_name, inst_ev in individual['Evaluation'].items():
-                            sum += inst_ev[of_name]
-                        mean_evaluation[of_name] = sum / num_instances
-
-    def evaluate_individual(self, individual): #return a dictionary of objective function values
-        solutions = self.get_individual_solution(individual)
-        evaluation = {}
-        for instance_name, solution in solutions.items():
-            evaluation[instance_name] = {}
-            #if self.feasibility(self.instances[instance_name], solution):
-            results = self.objective_functions(solution)
-            for of_name, _ in self.of.items():
-                evaluation[instance_name][of_name] = results[of_name]
-            #else:
-            #    return False
-        return evaluation
-
-    def get_individual_solution(self, individual):
-        code = individual['Code']
-        local_vars = {}
-        exec(code, globals(), local_vars)
-        heuristic = local_vars['heuristic']
-        solutions = {}
-        for name, instance in self.instances.items():
-            solutions[name] = heuristic(instance)
-        del local_vars['heuristic']
-        return solutions
+            individual.normalize(self.of)
+            individual.average(self.of, num_instances)
     
     def get_instances(self):
         instances = self.Reader.get_instances()
@@ -113,6 +59,65 @@ class NSGA_Evo(ABC):
         for name, instance in instances.items():
             decoded_ins[name] = self.decode_instance(instance)
         return decoded_ins
+    
+    def select_parents(self): #selecciona los padres y los pone en la población, eliminando los demás.
+        if len(self.of) <= 3:
+            self.population = self.select_parents_II()
+        else:
+            self.population = self.select_parents_III()
+    
+    def select_parents_II(self): #utilizando NSGA II
+        if len(self.population) > self.population_size: #por si existe menos población que population_size debido a infeasibles
+            global_front = []
+            num_parents = 0
+            current_population = self.population
+            while not num_parents == self.population_size:
+                front, current_population = self.get_pareto_front(current_population) #el resto de la población se pone en current_population para siguiente frontera
+                if num_parents + len(front) <= self.population_size:
+                    global_front.extend(front)
+                    num_parents += len(front)
+                else:
+                    calculate_crowding_distance(front)
+                    front_sorted = sorted(front, key=lambda x: x['crowding_distance'], reverse=True)
+                    remaining = self.population_size - num_parents
+                    global_front.extend(front_sorted[:remaining])
+                    num_parents += remaining
+
+            return global_front
+        else:
+            return self.population
+
+    def select_parents_III(self): #utilizando NSGA III
+        k = self.population_size // len(self.reference_vectors)
+        rest = self.population_size % len(self.reference_vectors) #iremos añadiendo el resto por orden de vector referencia
+        groups = self.get_groups_reference_vectors(k, rest)
+        front = []
+        for key, value in groups.items():
+            front.extend(value)
+        return front
+    
+    def get_groups_reference_vectors(self, k, rest = 0): #k es los k mejores de cada uno, y rest por si sobran
+        calculate_distances_to_reference_vectors(self.population, self.reference_vectors)
+        groups = {}
+        for reference_vector in self.reference_vectors:
+            sorted_population = sorted(self.population, key=lambda ind: ind.vector_distance[reference_vector], reverse=True)
+            if rest > 0:
+                groups[reference_vector] = sorted_population[:k + 1]
+                rest -= 1
+            else:
+                groups[reference_vector] = sorted_population[:k]
+        return groups
+    
+    def get_pareto_front(self, current_population):
+        pareto_front = []
+        rest = []
+        for individual in current_population:
+            dominated = individual.get_dominance(current_population)
+            if not dominated:
+                pareto_front.append(individual)
+            else:
+                rest.append(individual)
+        return pareto_front, rest
 
     @abstractmethod
     def feasibility(self, instance, solution):
