@@ -4,6 +4,7 @@ class Individual:
     _counter = 0
     def __init__(self, description, code):
         self.id = Individual._counter #id único para cada individuo
+        Individual._counter += 1
         self.description = description  #Descripción del individuo
         self.code = code  #Código del individuo (su heurística)
         self.evaluation = None  #Evaluación del individuo (un diccionario de valores de las funciones objetivo)
@@ -21,15 +22,13 @@ class Individual:
                 for instance_name, solution in solutions.items():
                     evaluation[instance_name] = {}
                     f = feasibility(instances[instance_name], solution)
-                    print(f)
-                    print(solution)
-                    print(instances[instance_name])
                     if f == True:
                         self.feasible = True
                         results = objective_functions(solution)
                         for of_name, _ in of.items():
                             evaluation[instance_name][of_name] = results[of_name]
                     else:
+                        print(self.code)
                         self.repair(f) #se manda el mensaje de por qué ha fallado
                         repair_counter += 1
                         break
@@ -65,7 +64,7 @@ class Individual:
                     value = (max - inst_ev[of_name]) / divisor
                     if of_info['Objective'] == 'Maximize':
                         value = 1 - value
-                    self.evaluation[of_name] = value
+                    self.evaluation[inst_name][of_name] = value
 
     def average(self, of, num_instances):
         if self.feasible:
@@ -87,19 +86,19 @@ class Individual:
                         of_info['max_score'][inst_name] = inst_ev[of_name]
         return of
     
-    def get_dominance(self, population):
+    def get_dominance(self, of, population):
         if self.feasible:
             dominated = False
             for individual in population:
-                if not individual.id == self.id and self.is_dominated(individual):  # Si ind1 es dominado por ind2
+                if not individual.id == self.id and self.is_dominated(of, individual):  # Si ind1 es dominado por ind2
                     dominated = True
                     break
             return dominated
         return True # si no es feasible, devolvemos que es dominada
 
-    def is_dominated(self, ind):
+    def is_dominated(self, of, ind):
         dominated = False
-        for of_name, _ in self.of.items():
+        for of_name, _ in of.items():
             if self.evaluation[of_name] > ind.evaluation[of_name]:
                 return False
             if self.evaluation[of_name] < ind.evaluation[of_name]:

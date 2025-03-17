@@ -41,6 +41,6 @@ def objective_functions(solution):
         if len(loads) < 2:
             return 0  
 
-        return np.std(loads)
+        return float(np.std(loads))
 
     return {'Makespan': calculate_makespan(solution), 'Separation': calculate_operation_separation(solution), 'Balance': calculate_balance_load(solution)}

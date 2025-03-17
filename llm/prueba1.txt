@@ -1,10 +1,9 @@
-The heuristic is based on Simulated Annealing (SA), where an initial solution is iteratively improved by making small changes to the job-machine assignments and evaluating their effect on the makespan, operation time, and machine load.
-
+This heuristic assigns jobs to machines by selecting the machine with the earliest available time, considering both machine and job constraints. It schedules operations sequentially, updates machine availability and job completion times, and returns a schedule with start and end times, ensuring efficient resource utilization for minimizing makespan.
 ```python
 import random
 def heuristic(input_data):
     schedule = {}
-    machine_available_time = {m: 0 for m in range(input_data['n_machines'] + 1)}
+    machine_available_time = {m: 0 for m in range(input_data['n_machines'])}
     job_latest_time = {j: 0 for j in input_data['jobs'].keys()}
 
     for job_id, operations in input_data['jobs'].items():
@@ -21,7 +20,7 @@ def heuristic(input_data):
             # Guardar la asignación
             schedule[job_id].append({
                 'Operation': op_id,
-                'Assigned Machine': assigned_machine + 1,
+                'Assigned Machine': assigned_machine,
                 'Start Time': start_time,
                 'End Time': end_time,
                 'Processing Time': processing_time

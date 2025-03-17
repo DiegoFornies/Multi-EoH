@@ -18,3 +18,7 @@ class LLMManager:
         code_matches = code_matches[0] if code_matches else ''
         
         return description, code_matches
+    
+    def get_reflection(self, system_prompt, user_prompt):
+        response = self.LLMClient.query(system_prompt, user_prompt)
+        return response

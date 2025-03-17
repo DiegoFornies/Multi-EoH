@@ -1,0 +1,5 @@
+The general cluster performance is {cluster_performance} (where 0 represents the worst performance and 1 represents the best performance in that objective function)
+
+##Heuristics
+
+{heuristics}

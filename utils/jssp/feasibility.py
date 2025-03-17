@@ -13,7 +13,7 @@ def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje
         return True
 
     def machine_feasibility():
-        machine_operations = {int(machine): [] for machine in range(1, instance['n_machines'] + 1)}
+        machine_operations = {int(machine): [] for machine in range(0, instance['n_machines'])}
         for job, operations in solution.items():
             for op in operations:
                 assigned_machine = int(op['Assigned Machine'])

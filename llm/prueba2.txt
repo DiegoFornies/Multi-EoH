@@ -1,0 +1,34 @@
+This heuristic randomly assigns machines to jobs from the available options, considering both machine availability and job constraints. For each operation, it calculates the start and end times, updates the machine and job times, and generates a schedule. This approach aims to provide a simple, non-optimal solution for job scheduling.
+```python
+import random
+def heuristic(input_data):
+    schedule = {}
+    machine_available_time = {m: 0 for m in range(input_data['n_machines'])}
+    job_latest_time = {j: 0 for j in input_data['jobs'].keys()}
+
+    for job_id, operations in input_data['jobs'].items():
+        schedule[job_id] = []
+
+        for op_id, (machines, times) in enumerate(operations, start=1):
+            index = random.randint(0, len(machines) - 1)  # Selección aleatoria
+            assigned_machine = machines[index]
+            processing_time = times[index]
+            start_time = max(machine_available_time[assigned_machine], job_latest_time[job_id])
+            end_time = start_time + processing_time
+
+            # Guardar la asignación
+            schedule[job_id].append({
+                'Operation': op_id,
+                'Assigned Machine': assigned_machine,
+                'Start Time': start_time,
+                'End Time': end_time,
+                'Processing Time': processing_time
+            })
+
+            # Actualizar disponibilidad de la máquina y del trabajo
+            machine_available_time[assigned_machine] = end_time
+            job_latest_time[job_id] = end_time
+
+    return schedule
+
+```

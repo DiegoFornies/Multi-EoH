@@ -79,3 +79,30 @@ class Reader:
                 instances[filename] = content
 
         return instances
+
+    def get_cluster_reflection(self, cluster, of):
+        system_prompt = self.read_file(f'{self.prompt_path}system_short_reflection.txt')
+        user_prompt = self.read_file(f'{self.prompt_path}user_short_reflection.txt')
+        centroid = cluster['Centroid']
+        individuals = cluster['Individuals']
+        individuals_info = individuals.toString()
+
+        performance = ''
+
+        for num, (of_name, _) in enumerate(of.items()):
+            performance += f'{of_name}: {centroid[num]}     '
+        user_prompt = user_prompt.replace('{cluster_performance}', performance).replace('{heuristics}', individuals_info)
+        return system_prompt, user_prompt
+    
+    def get_long_reflection(self, long_reflections, clusters, of):
+        system_prompt = self.read_file(f'{self.prompt_path}system_long_reflection.txt')
+        user_prompt = self.read_file(f'{self.prompt_path}user_long_reflection.txt')
+
+        clusters_reflections = ''
+        for cluster in clusters:
+            centroid = cluster['Centroid']
+            for num, (of_name, _) in enumerate(of.items()):
+                performance += f'{of_name}: {centroid[num]}     '
+            clusters_reflections += f'Cluster general performance: {performance}\nCluster reflection: {cluster['Reflection']}\n'
+        user_prompt = user_prompt.replace('{clusters_reflections}', performance).replace('{long_reflections}', long_reflections)
+        return system_prompt, user_prompt
