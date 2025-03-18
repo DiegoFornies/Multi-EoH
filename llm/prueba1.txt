@@ -9,7 +9,7 @@ def heuristic(input_data):
     for job_id, operations in input_data['jobs'].items():
         schedule[job_id] = []
 
-        for op_id, (machines, times) in enumerate(operations, start=1):
+        for op_id, (machines, ties) in enumerate(operations, start=1):
             # Seleccionar la máquina con menor tiempo disponible respetando tiempos de trabajo
             best_index = min(range(len(machines)), key=lambda i: max(machine_available_time[machines[i]], job_latest_time[job_id]))
             assigned_machine = machines[best_index]

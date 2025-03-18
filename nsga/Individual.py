@@ -1,4 +1,5 @@
 import random
+import traceback
 
 class Individual:
     _counter = 0
@@ -10,33 +11,37 @@ class Individual:
         self.evaluation = None  #Evaluación del individuo (un diccionario de valores de las funciones objetivo)
         self.crowding_distance = 0.0
         self.vector_distance = {}
-        self.feasible = False
+        self.valid = False
         self.max_repair = 3
 
     def evaluate(self, instances, objective_functions, feasibility, of): #devuelve false si infeasible
         if self.evaluation == None:
-            solutions = self.get_solutions(instances)
-            evaluation = {}
             repair_counter = 0
-            while not self.feasible and repair_counter <= self.max_repair:
-                for instance_name, solution in solutions.items():
-                    evaluation[instance_name] = {}
-                    f = feasibility(instances[instance_name], solution)
-                    if f == True:
-                        self.feasible = True
-                        results = objective_functions(solution)
-                        for of_name, _ in of.items():
-                            evaluation[instance_name][of_name] = results[of_name]
-                    else:
-                        print(self.code)
-                        self.repair(f) #se manda el mensaje de por qué ha fallado
-                        repair_counter += 1
-                        break
-            if self.feasible:
-                self.evaluation = evaluation
-                return True
-            else:
-                return False                
+            while not self.valid and repair_counter <= self.max_repair:
+                evaluation = {}
+                try:
+                    solutions = self.get_solutions(instances)
+                    for instance_name, solution in solutions.items():
+                        f = feasibility(instances[instance_name], solution)
+                        if f == True:
+                            self.valid = True
+                            results = objective_functions(solution)
+                            evaluation[instance_name] = {}
+                            for of_name, _ in of.items():
+                                evaluation[instance_name][of_name] = results[of_name]
+                        else:
+                            self.repair(f)
+                            repair_counter += 1
+                            evaluation = 'Infeasible'
+                            self.valid = False
+                            break
+                except Exception as e:
+                    self.repair(traceback.format_exc())
+                    repair_counter += 1
+                    evaluation = 'Code Error'
+                    self.valid = False
+            self.evaluation = evaluation
+            print(evaluation)
 
     def repair(self, message):
         #TODO modificar la descripción y el código, no devolver nada
@@ -53,7 +58,7 @@ class Individual:
         return solutions
     
     def normalize(self, of):
-        if self.feasible:
+        if self.valid:
             for of_name, of_info in of.items():
                 for inst_name, inst_ev in self.evaluation.items():
                     min = of_info['min_score'][inst_name]
@@ -67,7 +72,7 @@ class Individual:
                     self.evaluation[inst_name][of_name] = value
 
     def average(self, of, num_instances):
-        if self.feasible:
+        if self.valid:
             mean_evaluation = {}
             for of_name, of_info in of.items():
                 sum = 0
@@ -77,7 +82,7 @@ class Individual:
             self.evaluation = mean_evaluation
 
     def update_minmax(self, of):
-        if self.feasible:
+        if self.valid:
             for of_name, of_info in of.items():
                 for inst_name, inst_ev in self.evaluation.items():
                     if of_info['min_score'][inst_name] > inst_ev[of_name]:
@@ -87,14 +92,14 @@ class Individual:
         return of
     
     def get_dominance(self, of, population):
-        if self.feasible:
+        if self.valid:
             dominated = False
             for individual in population:
                 if not individual.id == self.id and self.is_dominated(of, individual):  # Si ind1 es dominado por ind2
                     dominated = True
                     break
             return dominated
-        return True # si no es feasible, devolvemos que es dominada
+        return True # si no es valido, devolvemos que es dominada
 
     def is_dominated(self, of, ind):
         dominated = False

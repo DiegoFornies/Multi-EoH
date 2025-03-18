@@ -16,6 +16,8 @@ class NSGA_Evo(ABC):
 
         self.instances = self.get_instances()
 
+        self.long_reflection = ''
+
         self.of = self.init_objective_functions_info(objective_functions)
 
         self.reference_vectors = reference_vectors
@@ -47,21 +49,24 @@ class NSGA_Evo(ABC):
     def reflection(self, clusters):
         clusters_reflection = []
         for cluster, info in clusters.items():
-            system_prompt, user_prompt = self.Reader.get_cluster_reflection(info, self.of)
+            system_prompt, user_prompt = self.Reader.get_cluster_reflection_prompt(info, self.of)
             ref = self.LLMManager.get_reflection(system_prompt, user_prompt)
             clusters_reflection.append({'Centroid': info['Centroid'], 'Reflection': ref})
-        system_prompt, user_prompt = self.Reader.get_long_reflection(clusters_reflection, self.of)
-        general_reflection = self.LLMManager.get_reflection(system_prompt, user_prompt)
-        return general_reflection
+        system_prompt, user_prompt = self.Reader.get_long_reflection_prompt(self.long_reflection, clusters_reflection, self.of)
+        long_reflection = self.LLMManager.get_reflection(system_prompt, user_prompt)
+        return long_reflection
     
     def start(self, k):
         self.population.init_population()
         self.population.evaluate_population(self.instances, self.objective_functions, self.feasibility, self.of)
+        if len(self.population.population) == 0:
+            print('No hay ningún heurístico válido.')
+            return
         parents = self.select_parents()
         parents.print_population()
         clusters = self.population.get_k_means(k)
-        self.reflection(clusters)
-        print(clusters)
+        long_reflection = self.reflection(clusters)
+        
 
     @abstractmethod
     def feasibility(self, instance, solution):

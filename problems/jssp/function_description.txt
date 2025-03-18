@@ -1,0 +1,40 @@
+The function must be named 'heuristic'.
+
+The input of the function 'heuristic' is a dictionary with the following keys:
+- n_jobs: Total number of jobs.
+- n_machines: Total number of machines.
+- jobs: A dictionary where:
+    - Each key is a job number.
+    - Each value is a list of operations for that job.
+    - Each operation is a tuple containing:
+        - A list of machines involved.
+        - A list of corresponding processing times.
+Example Input:
+{
+    'n_jobs': 3,
+    'n_machines': 3,
+    'jobs': {
+        1: [([1, 2], [10, 15]), ([2], [20])], # Operation 1: machines [1, 2], processing times [10, 15]
+        2: [([2], [20])],
+        3: [([1, 2, 3], [5, 10, 12]), ([2], [10]), ([3], [12])]
+    }
+}
+
+The output is a dictionary where:
+- Each **key** is a **job number** (starting from 1).
+- The value is a list of dictionaries containing each operation as:
+    - Operation: Operation number. (starting from 0)
+    - Assigned Machine: Assigned machine number.
+    - Start Time: Start time.
+    - End Time: End time.
+    - Processing Time: Processing time.
+Example:
+{
+    1: [{'Operation': 1, 'Assigned Machine': '1', 'Start Time': 0, 'End Time': 10, 'Processing Time': 10}, {...}],
+    2: [{'Operation': 1, 'Assigned Machine': '2', 'Start Time': 0, 'End Time': 5, 'Processing Time': 5}, {...}],
+}
+
+You can also evaluate the performance of a solution using the objective_functions(solution) function.
+- Input: A solution in the same format.
+- Output: A dictionary where each key represents an objective function number, and the corresponding value is its computed result.
+    - Example of output: {'Makespan': 25, 'Separation': 5, 'Balance': 40.0} 

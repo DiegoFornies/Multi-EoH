@@ -29,15 +29,19 @@ class Population():
         self.population.append(individual)
     
     def evaluate_population(self, instances, objective_functions, feasibility, of): #evalúa la población, la normaliza y la media.
-        for individual in self.population:
-            feasible = individual.evaluate(instances, objective_functions, feasibility, of) #guarda la evaluación en individual y devuelve si es feasible o no
-            if not feasible:
+        for individual in list(self.population):
+            individual.evaluate(instances, objective_functions, feasibility, of) #guarda la evaluación en individual y devuelve si es feasible o no
+            if individual.evaluation == 'Infeasible':
                 print(f'El heurístico {individual.id} no es feasible, se elimina.')
                 self.population.remove(individual) #eliminamos los individuos que sean infeasibles
+            if individual.evaluation == 'Code Error':
+                print(f'El heurístico {individual.id} tiene errores en el código, se elimina.')
+                self.population.remove(individual)
         self.update_minmax_score(of)
         self.normalize_and_mean_population(of, instances)
 
     def update_minmax_score(self, of):
+        self.print_population()
         for individual in self.population:
             self.of = individual.update_minmax(of)
     
@@ -108,6 +112,7 @@ class Population():
         clusters = {label:{'Individuals': self.create_subpopulation([]), 'Centroid': centroid} for label, centroid in enumerate(kmeans.cluster_centers_)} #guardamos centroide y individuo para cada cluster
         for ind, label in zip(self.population, kmeans.labels_):
             clusters[label]['Individuals'].add_individual(ind)
+        
         return clusters
     
     def toString(self):
@@ -119,4 +124,4 @@ class Population():
     def print_population(self):
         print(f'\nCantidad de individuos: {len(self.population)}')
         for individual in self.population:
-            print(f'\nIndividuo {individual.id}: \n   Evaluación: {individual.evaluation}, Feasible: {individual.feasible}, Crowding Distance: {individual.crowding_distance}')
+            print(f'\nIndividuo {individual.id}: \n   Evaluación: {individual.evaluation}, Valid: {individual.valid}, Crowding Distance: {individual.crowding_distance}')

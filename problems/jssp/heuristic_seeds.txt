@@ -1,5 +1,4 @@
-Evolutionary Algorithms (EA)
-Simulated Annealing (SA)
-Ant Colony Optimization (ACO)
-Particle Swarm Optimization (PSO)
-Constraint Programming (CP)
+SPT - Shortest Processing Time
+LWR - Least Work Remaining
+First In, First Out
+Slack Time Rule - STR

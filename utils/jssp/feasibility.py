@@ -1,5 +1,5 @@
 def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje con los fallos si está mal.
-    def operation_feasibility():
+    def operation_feasibility(): #operaciones empiezan de 0
         for job, operations in solution.items():
             job_operations = instance['jobs'][job]
             for op_idx, op in enumerate(operations):
@@ -12,7 +12,7 @@ def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje
                     return False
         return True
 
-    def machine_feasibility():
+    def machine_feasibility(): #machine empieza de 0
         machine_operations = {int(machine): [] for machine in range(0, instance['n_machines'])}
         for job, operations in solution.items():
             for op in operations:

@@ -1,0 +1,3 @@
+{role_init} helping to design heuristics that can effectively solve optimization problems.
+Your response outputs Python code and nothing else. Format your code as a Python code string: ```python ... ```.
+The function must be called heuristic.

@@ -1,10 +1,11 @@
 import os
 
 class Reader:
-    def __init__(self, problem_name, prompt_path='prompts/'):
+    def __init__(self, problem_name, prompt_path='prompts'):
         """Inicializa el gestor de prompts con la ruta base y el problema a cargar."""
         self.prompt_path = prompt_path
         self.problem_path = 'problems/' + problem_name
+        self.reflection_path = prompt_path + '/reflection'
         self.n_role = 0
         self.n_heuristic_seed = 0
         self.cache = {}  #Diccionario para cachear prompts ya leídos
@@ -22,38 +23,28 @@ class Reader:
         except FileNotFoundError:
             print(f"El archivo '{path}' no fue encontrado.")
             return ""
-
-    def read_problem_specifications(self):
-        """Lee y devuelve las especificaciones del problema desde archivos con cacheo."""
-        return (
-            self.read_file(f'{self.problem_path}/problem_description.txt'),
-            self.read_file(f'{self.problem_path}/input_specifications.txt'),
-            self.read_file(f'{self.problem_path}/output_specifications.txt')
-        )
-
-    def user_initialization_prompt(self):
-        """Genera el prompt de inicialización del usuario con los datos del problema."""
-        problem_description, input_specifications, output_specifications = self.read_problem_specifications()
         
-        prompt = self.read_file(f'{self.prompt_path}user_population_initialization.txt')
-        return (prompt
-                .replace("{problem_description}", problem_description)
-                .replace("{input_specifications}", input_specifications)
-                .replace("{heuristic_seed}", self.get_heuristic_seed())
-                .replace("{output_specifications}", output_specifications))
+    def get_system_generator_prompt(self):
+        prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt')
+        role_init = self.get_role()
+        return prompt.replace('{role_init}', role_init)
 
-    def system_initialization_prompt(self):
-        """Genera el prompt de inicialización del sistema según el rol."""    
-        prompt = self.read_file(f'{self.prompt_path}system_population_initialization.txt')
-        return prompt.replace("{role_init}", self.get_role())
+    def get_task_description(self):
+        task_description = self.read_file(f'{self.prompt_path}/task_description.txt')
+        role_init = self.get_role()
+        problem_description = self.read_file(f'{self.problem_path}/problem_description.txt')
+        function_description = self.read_file(f'{self.problem_path}/function_description.txt')
+        return task_description.replace('{role_init}', role_init).replace('{problem_description}', problem_description).replace('{function_description}', function_description)
 
     def get_initialization_prompt(self):
-        """Retorna el prompt de inicialización para el sistema y el usuario."""
-        return self.system_initialization_prompt(), self.user_initialization_prompt()
+        user_prompt = self.read_file(f'{self.prompt_path}/user_population_initialization.txt')
+        task_description = self.get_task_description()
+        heuristic_seed = self.get_heuristic_seed()
+        return self.get_system_generator_prompt(), user_prompt.replace('{task_description}', task_description).replace('{heuristic_seed}', heuristic_seed)
     
     def get_role(self):
         """Retorna el role y actualiza su número"""
-        roles = self.read_file(f'{self.prompt_path}role_init.txt').split('\n')
+        roles = self.read_file(f'{self.prompt_path}/role_init.txt').split('\n')
         role = roles[self.n_role]
         if self.n_role == len(roles) - 1:
             self.n_role = 0
@@ -80,9 +71,9 @@ class Reader:
 
         return instances
 
-    def get_cluster_reflection(self, cluster, of):
-        system_prompt = self.read_file(f'{self.prompt_path}system_short_reflection.txt')
-        user_prompt = self.read_file(f'{self.prompt_path}user_short_reflection.txt')
+    def get_cluster_reflection_prompt(self, cluster, of):
+        system_prompt = self.read_file(f'{self.reflection_path}/system_short_reflection.txt')
+        user_prompt = self.read_file(f'{self.reflection_path}/user_short_reflection.txt')
         centroid = cluster['Centroid']
         individuals = cluster['Individuals']
         individuals_info = individuals.toString()
@@ -94,15 +85,17 @@ class Reader:
         user_prompt = user_prompt.replace('{cluster_performance}', performance).replace('{heuristics}', individuals_info)
         return system_prompt, user_prompt
     
-    def get_long_reflection(self, long_reflections, clusters, of):
-        system_prompt = self.read_file(f'{self.prompt_path}system_long_reflection.txt')
-        user_prompt = self.read_file(f'{self.prompt_path}user_long_reflection.txt')
+    def get_long_reflection_prompt(self, long_reflections, clusters, of):
+        system_prompt = self.read_file(f'{self.reflection_path}/system_long_reflection.txt')
+        user_prompt = self.read_file(f'{self.reflection_path}/user_long_reflection.txt')
 
         clusters_reflections = ''
         for cluster in clusters:
             centroid = cluster['Centroid']
+            performance = ''
             for num, (of_name, _) in enumerate(of.items()):
                 performance += f'{of_name}: {centroid[num]}     '
-            clusters_reflections += f'Cluster general performance: {performance}\nCluster reflection: {cluster['Reflection']}\n'
+            reflection = cluster['Reflection']
+            clusters_reflections += f'Cluster general performance: {performance}\nCluster reflection: {reflection}\n'
         user_prompt = user_prompt.replace('{clusters_reflections}', performance).replace('{long_reflections}', long_reflections)
         return system_prompt, user_prompt

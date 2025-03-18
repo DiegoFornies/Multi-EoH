@@ -1,4 +1,6 @@
-Problem description: {problem_description}
+{task_description}
 Heuristic seed: {heuristic_seed}
-Input specifications: {input_specifications}
-Output specifications: {output_specifications}
+def heuristic(input_data):
+    (...)
+    return solution
+Refer to the format of a trivial design above. Be very creative and give a completed version of the function based on the heuristic seed. Output code only and enclose your code with Python code block: ‘‘‘python ... ‘‘‘.
