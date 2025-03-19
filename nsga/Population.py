@@ -54,23 +54,29 @@ class Population():
     def select_parents_II(self, of): #utilizando NSGA II
         if len(self.population) > self.population_size: #por si existe menos población que population_size debido a infeasibles
             global_front = []
+            front_num = 0
             num_parents = 0
             current_population = self.population
             while not num_parents == self.population_size:
                 front, current_population = self.get_pareto_front(current_population, of) #el resto de la población se pone en current_population para siguiente frontera
+                calculate_crowding_distance(front)
                 if num_parents + len(front) <= self.population_size:
-                    global_front.extend(front)
                     num_parents += len(front)
                 else:
                     calculate_crowding_distance(front)
-                    front_sorted = sorted(front, key=lambda x: x.crowding_distance, reverse=True)
+                    front = sorted(front, key=lambda x: x.crowding_distance, reverse=True)
                     remaining = self.population_size - num_parents
-                    global_front.extend(front_sorted[:remaining])
+                    front = front[:remaining]
                     num_parents += remaining
-            print('a')
+                for individual in front:
+                    individual.front = front_num
+                global_front.extend(front)
+                front_num += 1
             return self.create_subpopulation(global_front)
         else:
+            calculate_crowding_distance(self.population)
             return self
+
 
     def select_parents_III(self, reference_vectors): #utilizando NSGA III
         k = self.population_size // len(reference_vectors)
@@ -118,8 +124,12 @@ class Population():
     def toString(self):
         text = ''
         for individual in self.population:
-            text += f'Heuristic{individual.id}: \nDescription: {individual.description} \nCode: {individual.code}\n'
+            text += f'Heuristic {individual.id}: \nDescription: {individual.description} \nCode: {individual.code}\n'
         return text
+    
+    def population_without_ind(self, ind):
+        new_population = self.population.copy()
+        return new_population.remove(ind)
     
     def print_population(self):
         print(f'\nCantidad de individuos: {len(self.population)}')

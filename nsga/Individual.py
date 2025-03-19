@@ -9,10 +9,11 @@ class Individual:
         self.description = description  #Descripción del individuo
         self.code = code  #Código del individuo (su heurística)
         self.evaluation = None  #Evaluación del individuo (un diccionario de valores de las funciones objetivo)
-        self.crowding_distance = 0.0
+        self.crowding_distance = None
         self.vector_distance = {}
         self.valid = False
         self.max_repair = 3
+        self.front = None
 
     def evaluate(self, instances, objective_functions, feasibility, of): #devuelve false si infeasible
         if self.evaluation == None:
@@ -41,7 +42,6 @@ class Individual:
                     evaluation = 'Code Error'
                     self.valid = False
             self.evaluation = evaluation
-            print(evaluation)
 
     def repair(self, message):
         #TODO modificar la descripción y el código, no devolver nada
@@ -73,12 +73,16 @@ class Individual:
 
     def average(self, of, num_instances):
         if self.valid:
+            global_sum = 0
             mean_evaluation = {}
             for of_name, of_info in of.items():
                 sum = 0
                 for inst_name, inst_ev in self.evaluation.items():
                     sum += inst_ev[of_name]
                 mean_evaluation[of_name] = sum / num_instances
+                global_sum += mean_evaluation[of_name]
+            
+            mean_evaluation['Mean'] = global_sum / len(of) #media global
             self.evaluation = mean_evaluation
 
     def update_minmax(self, of):

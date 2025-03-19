@@ -76,7 +76,10 @@ class Reader:
         user_prompt = self.read_file(f'{self.reflection_path}/user_short_reflection.txt')
         centroid = cluster['Centroid']
         individuals = cluster['Individuals']
-        individuals_info = individuals.toString()
+
+        individuals_info = ''
+        for individual in individuals:
+            individuals_info += f'Heuristic {individual.id}: \nDescription: {individual.description} \nCode: {individual.code}\n'
 
         performance = ''
 
