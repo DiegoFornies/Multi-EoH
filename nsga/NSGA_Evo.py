@@ -2,14 +2,15 @@ from abc import ABC, abstractmethod
 from reader import Reader
 from llm import LLMManager
 from nsga.Individual import Individual
-from nsga.Population import Population
 import random
 from utils import calculate_crowding_distance, calculate_distances_to_reference_vectors
 import numpy as np
 from sklearn.cluster import KMeans
+import os
+from datetime import datetime
 
 class NSGA_Evo(ABC):
-    def __init__(self, problem_name, population_size, objective_functions, reference_vectors = ''):
+    def __init__(self, problem_name, population_size, objective_functions, k, iterations, reference_vectors = ''):
         self.Reader = Reader(problem_name)
         self.LLMManager = LLMManager()
 
@@ -17,8 +18,9 @@ class NSGA_Evo(ABC):
         self.population = []
         self.problem_name = problem_name
 
-        self.crossover_iterations = self.population_size
-        self.mutation_iterations = 3
+        self.mutation_iterations = 2
+        self.crossover_iterations = self.population_size - self.mutation_iterations
+        self.k = k
 
         self.instances = self.get_instances()
 
@@ -30,7 +32,30 @@ class NSGA_Evo(ABC):
 
         self.reference_vectors = reference_vectors
 
-        self.max_evolutions = 1
+        self.max_evolutions = iterations
+
+        self.whole_population = []
+
+        self.folder_path = self.create_execution_folder()
+
+    def create_execution_folder(self):
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        base_path = os.path.join("ejecuciones", f"folder_{timestamp}")
+
+        os.makedirs(base_path)
+
+        parameters_file = os.path.join(base_path, "parameters.txt")
+
+        with open(parameters_file, "w") as file:
+            file.write(f"""Population size: {self.population_size} 
+            Problem name: {self.problem_name}
+            Max evolutions: {self.max_evolutions}
+            Crossover: {self.crossover_iterations}
+            Mutation: {self.mutation_iterations}
+            K: {self.k}""")
+            
+        return base_path
 
     def init_objective_functions_info(self, objective_functions):
         for _, of_info in objective_functions.items():
@@ -50,22 +75,24 @@ class NSGA_Evo(ABC):
 
     def create_individual(self, system_prompt, user_prompt):
         description, code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
-        return Individual(description, code)
+        return Individual(description, code, self.Reader, self.LLMManager, self.folder_path)
     
     def evaluate_population(self): #evalúa la población, la normaliza y la media.
         for individual in list(self.population):
             individual.evaluate(self.instances, self.objective_functions, self.feasibility, self.of) #guarda la evaluación en individual y devuelve si es feasible o no
-            if individual.evaluation == 'Infeasible':
+            if individual.base_evaluation == 'Infeasible':
                 print(f'El heurístico {individual.id} no es feasible, se elimina.')
                 self.population.remove(individual) #eliminamos los individuos que sean infeasibles
-            if individual.evaluation == 'Code Error':
+            if individual.base_evaluation == 'Code Error':
                 print(f'El heurístico {individual.id} tiene errores en el código, se elimina.')
                 self.population.remove(individual)
-        self.update_minmax_score(self.of)
-        self.normalize_and_mean_population(self.of, self.instances)
+        self.update_minmax_score()
+        self.normalize_and_mean_population()
+        print('base: ', self.population[0].base_evaluation)
+        print('normalized: ', self.population[0].normalized_evaluation)
+        print('evaluation: ', self.population[0].evaluation)
 
     def update_minmax_score(self):
-        self.print_population()
         for individual in self.population:
             self.of = individual.update_minmax(self.of)
     
@@ -74,39 +101,37 @@ class NSGA_Evo(ABC):
         for individual in self.population:
             individual.normalize(self.of)
             individual.average(self.of, num_instances)
+            individual.evaluated = True
     
     def select_parents(self): #selecciona los padres y los pone en la población, eliminando los demás.
         if len(self.of) <= 3:
-            parents = self.population.select_parents_II(self.of)
+            parents, rest = self.select_parents_II()
         else:
-            parents = self.population.select_parents_III(self.reference_vectors)
-        return parents
+            parents = self.select_parents_III()
+        return parents, rest
 
     def select_parents_II(self): #utilizando NSGA II
-        if len(self.population) > self.population_size: #por si existe menos población que population_size debido a infeasibles
-            global_front = []
-            front_num = 0
-            num_parents = 0
-            current_population = self.population
-            while not num_parents == self.population_size:
-                front, current_population = self.get_pareto_front(current_population, self.of) #el resto de la población se pone en current_population para siguiente frontera
+        global_front = []
+        front_num = 0
+        num_parents = 0
+        current_population = self.population
+        while (not num_parents == self.population_size) and len(current_population) > 0:
+            front, current_population = self.get_pareto_front(current_population) #el resto de la población se pone en current_population para siguiente frontera
+            calculate_crowding_distance(front)
+            if num_parents + len(front) <= self.population_size:
+                num_parents += len(front)
+            else:
                 calculate_crowding_distance(front)
-                if num_parents + len(front) <= self.population_size:
-                    num_parents += len(front)
-                else:
-                    calculate_crowding_distance(front)
-                    front = sorted(front, key=lambda x: x.crowding_distance, reverse=True)
-                    remaining = self.population_size - num_parents
-                    front = front[:remaining]
-                    num_parents += remaining
-                for individual in front:
-                    individual.front = front_num
-                global_front.extend(front)
-                front_num += 1
-            return global_front
-        else:
-            calculate_crowding_distance(self.population)
-            return self.population
+                front = sorted(front, key=lambda x: x.crowding_distance, reverse=True)
+                remaining = self.population_size - num_parents
+                front = front[:remaining]
+                current_population = front[remaining:]
+                num_parents += remaining
+            for individual in front:
+                individual.front = front_num
+            global_front.extend(front)
+            front_num += 1
+        return global_front, current_population
 
 
     def select_parents_III(self): #utilizando NSGA III
@@ -141,9 +166,11 @@ class NSGA_Evo(ABC):
                 rest.append(individual)
         return pareto_front, rest
     
-    def get_k_means(self, population, k):
+    def get_k_means(self, population):
         evaluations = np.array([list(ind.evaluation.values()) for ind in population])
-        
+        k = self.k
+        if len(self.population) < self.k:
+            k = len(self.population)
         kmeans = KMeans(n_clusters=k, random_state=42)
         kmeans.fit(evaluations)
         clusters = {label:{'Individuals': [], 'Centroid': centroid} for label, centroid in enumerate(kmeans.cluster_centers_)} #guardamos centroide y individuo para cada cluster
@@ -169,6 +196,8 @@ class NSGA_Evo(ABC):
 
     def tournament_selection_nsgaII(self, parents):
 
+        if len(parents) == 1:
+            return random.sample(parents, 1)
         parent1, parent2 = random.sample(parents, 2)
 
         if parent1.front < parent2.front:
@@ -188,8 +217,10 @@ class NSGA_Evo(ABC):
             parents_without_parent1 = list(filter(lambda p: p != parent1, parents))
             parent2 = self.tournament_selection_nsgaII(parents_without_parent1) #seleccionamos población sin parent2
             sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossover_prompt(self.long_reflection, parent1, parent2)
-            new_individual = self.LLMManager.get_heuristic(sCrossover_prompt, uCrossover_prompt) #Falta implementar prompt de crossover
-            sons.append(new_individual)
+            #print(sCrossover_prompt, uCrossover_prompt)
+            son = self.create_individual(sCrossover_prompt, uCrossover_prompt)
+            #print(son.code)
+            sons.append(son)
         return sons
     
     def elitist_mutation(self, parents): #sólo una especie de mutación cogiendo los mejores individuos del frente pareto
@@ -201,32 +232,45 @@ class NSGA_Evo(ABC):
         sons = []
         for i in range(self.mutation_iterations):
             sMutation_prompt, uMutation_prompt = self.Reader.get_mutation_prompt(self.long_reflection, best_individual) #falta implementar prompt de mutation
-            new_individual = self.LLMManager.get_heuristic(sMutation_prompt, uMutation_prompt)
-            sons.append(new_individual)
+            son = self.create_individual(sMutation_prompt, uMutation_prompt)
+            sons.append(son)
         return sons
     
-    def select_best_individuals(self): #TODO
-        pass
-          
-    def start(self, k):
-        self.population.init_population()
+    def select_best_individuals(self):
+        best, _ = self.get_pareto_front(self.whole_population)
+        with open('best_heuristics.txt', "w") as file:
+            for ind in best:
+                file.write(f"""Heuristic id: {ind.id} 
+                Base evaluation: {ind.base_evaluation}\n""")
+
+    def start(self):
+
+        self.init_population()
         for i in range(self.max_evolutions):
-            self.population.evaluate_population(self.instances, self.objective_functions, self.feasibility, self.of)
-            if len(self.population.population) == 0:
+            print(f'Starting evolution {i}...')
+            self.evaluate_population()
+            print(f'Evaluated.')
+            if len(self.population) == 0:
                 print('No hay ningún heurístico válido.')
                 return
-            parents = self.select_parents()
-            parents.print_population()
-            clusters = self.population.get_k_means(k)
+            parents, rest = self.select_parents()
+            print(f'Selected.')
+            self.whole_population.extend(rest)
+            clusters = self.get_k_means(parents)
             self.update_reflection(clusters)
+            print(f'Reflected.')
 
             crossover_sons = self.crossover(parents)
+            print(f'Crossover done.')
             mutation_sons = self.elitist_mutation(parents)
+            print(f'Mutation done.')
 
-            parents.append(crossover_sons)
-            parents.append(mutation_sons)
+            parents.extend(crossover_sons)
+            parents.extend(mutation_sons)
 
             self.population = parents
+        self.evaluate_population()
+        self.whole_population.extend(parents)
         self.select_best_individuals()
 
     @abstractmethod
@@ -244,4 +288,4 @@ class NSGA_Evo(ABC):
     def print_population(self):
         print(f'\nCantidad de individuos: {len(self.population)}')
         for individual in self.population:
-            print(f'\nIndividuo {individual.id}: \n   Evaluación: {individual.evaluation}, Valid: {individual.valid}, Crowding Distance: {individual.crowding_distance}')
+            print(f'\nIndividuo {individual.id}: \n   Evaluación: {individual.evaluation}, Valid: {individual.valid}, Crowding Distance: {individual.crowding_distance}, Front: {individual.front}')

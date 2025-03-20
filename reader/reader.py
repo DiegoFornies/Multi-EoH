@@ -39,8 +39,8 @@ class Reader:
     def get_initialization_prompt(self):
         user_prompt = self.read_file(f'{self.prompt_path}/user_population_initialization.txt')
         task_description = self.get_task_description()
-        heuristic_seed = self.get_heuristic_seed()
-        return self.get_system_generator_prompt(), user_prompt.replace('{task_description}', task_description).replace('{heuristic_seed}', heuristic_seed)
+        seed_function = self.read_file(f'{self.problem_path}/seed_function.txt')
+        return self.get_system_generator_prompt(), user_prompt.replace('{task_description}', task_description).replace('{seed_function}', seed_function)
     
     def get_role(self):
         """Retorna el role y actualiza su número"""
@@ -101,4 +101,30 @@ class Reader:
             reflection = cluster['Reflection']
             clusters_reflections += f'Cluster general performance: {performance}\nCluster reflection: {reflection}\n'
         user_prompt = user_prompt.replace('{clusters_reflections}', performance).replace('{long_reflections}', long_reflections)
+        return system_prompt, user_prompt
+    
+    def get_repair_prompt(self, broken_function, error):
+        system_prompt = self.read_file(f'{self.prompt_path}/system_repair_prompt.txt')
+        user_prompt = self.read_file(f'{self.prompt_path}/user_repair_prompt.txt')
+
+        problem_description = self.read_file(f'{self.problem_path}/problem_description.txt')
+        function_description = self.read_file(f'{self.problem_path}/function_description.txt')
+
+        user_prompt = user_prompt.replace('{broken_function}', broken_function).replace('{problem_description}', problem_description).replace('{function_description}',function_description).replace('{error}', error)
+        return system_prompt, user_prompt
+    
+    def get_crossover_prompt(self, long_reflection, parent1, parent2):
+        system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt')
+        user_prompt = self.read_file(f'{self.prompt_path}/user_crossover_prompt.txt')
+        task_description = self.get_task_description()
+
+        user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent1}', parent1.code).replace('{parent2}', parent2.code).replace('{long_reflection}', long_reflection)
+        return system_prompt, user_prompt
+    
+    def get_mutation_prompt(self, long_reflection, parent):
+        system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt')
+        user_prompt = self.read_file(f'{self.prompt_path}/user_mutation_prompt.txt')
+        task_description = self.get_task_description()
+
+        user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent1}', parent.code).replace('{long_reflection}', long_reflection)
         return system_prompt, user_prompt

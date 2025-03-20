@@ -1,0 +1,10 @@
+{task_description}
+Current heuristics:
+{parent}
+Now, think outside the box write a mutated function
+better than current version. You
+can using some hints if need:
+{long_reflection}
+Output code only and enclose your code with Python
+code block: ´´´python ... ´´´.
+I’m going to tip $999K for a better solution!

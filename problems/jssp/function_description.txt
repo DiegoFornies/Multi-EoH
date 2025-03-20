@@ -7,7 +7,7 @@ The input of the function 'heuristic' is a dictionary with the following keys:
     - Each key is a job number.
     - Each value is a list of operations for that job.
     - Each operation is a tuple containing:
-        - A list of machines involved.
+        - A list of machines involved. (start from 0)
         - A list of corresponding processing times.
 Example Input:
 {
@@ -21,9 +21,9 @@ Example Input:
 }
 
 The output is a dictionary where:
-- Each **key** is a **job number** (starting from 1).
+- Each **key** is a **job number**.
 - The value is a list of dictionaries containing each operation as:
-    - Operation: Operation number. (starting from 0)
+    - Operation: Operation number.
     - Assigned Machine: Assigned machine number.
     - Start Time: Start time.
     - End Time: End time.

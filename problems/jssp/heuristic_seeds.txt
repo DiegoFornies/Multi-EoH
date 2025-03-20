@@ -1,4 +1,0 @@
-SPT - Shortest Processing Time
-LWR - Least Work Remaining
-First In, First Out
-Slack Time Rule - STR

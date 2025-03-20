@@ -1,0 +1,69 @@
+
+def heuristic(input_data):
+    """Schedules jobs considering SPT and job operation count."""
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs_data = input_data['jobs']
+    schedule = {}
+    machine_available_times = {m: 0 for m in range(n_machines)}
+    job_completion_times = {j: 0 for j in range(1, n_jobs + 1)}
+    schedulable_operations = []
+    for job, operations in jobs_data.items():
+        schedulable_operations.append((job, 0))
+    job_priority = sorted(jobs_data.keys(), key=lambda job: len(jobs_data[job]))
+
+    while schedulable_operations:
+        best_operation = None
+        min_end_time = float('inf')
+
+        for job, op_index in schedulable_operations:
+            if job not in job_priority:
+                continue
+            operation = jobs_data[job][op_index]
+            available_machines = operation[0]
+            processing_times = operation[1]
+
+            best_machine = None
+            shortest_time = float('inf')
+            selected_processing_time = None
+
+            for i, machine in enumerate(available_machines):
+                potential_start_time = max(machine_available_times[machine], job_completion_times[job])
+                potential_end_time = potential_start_time + processing_times[i]
+                if potential_end_time < shortest_time:
+                    shortest_time = potential_end_time
+                    best_machine = machine
+                    selected_processing_time = processing_times[i]
+
+            if best_machine is not None:
+                total_end_time = max(machine_available_times[best_machine], job_completion_times[job]) + selected_processing_time
+                if total_end_time < min_end_time:
+                    min_end_time = total_end_time
+                    best_operation = (job, op_index, best_machine, selected_processing_time)
+
+        if best_operation:
+            job, op_index, machine, processing_time = best_operation
+            operation = jobs_data[job][op_index]
+            op_number = op_index + 1
+
+            start_time = max(machine_available_times[machine], job_completion_times[job])
+            end_time = start_time + processing_time
+
+            if job not in schedule:
+                schedule[job] = []
+            schedule[job].append({
+                'Operation': op_number,
+                'Assigned Machine': machine,
+                'Start Time': start_time,
+                'End Time': end_time,
+                'Processing Time': processing_time
+            })
+
+            machine_available_times[machine] = end_time
+            job_completion_times[job] = end_time
+            schedulable_operations.remove((job, op_index))
+
+            if op_index + 1 < len(jobs_data[job]):
+                schedulable_operations.append((job, op_index + 1))
+
+    return schedule

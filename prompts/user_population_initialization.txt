@@ -1,6 +1,3 @@
 {task_description}
-Heuristic seed: {heuristic_seed}
-def heuristic(input_data):
-    (...)
-    return solution
-Refer to the format of a trivial design above. Be very creative and give a completed version of the function based on the heuristic seed. Output code only and enclose your code with Python code block: ‘‘‘python ... ‘‘‘.
+{seed_function}
+Refer to the format of a trivial design above. Be very creative and give a completely different heuristic that improves the one given. Output code only and enclose your code with Python code block: ‘‘‘python ... ‘‘‘.

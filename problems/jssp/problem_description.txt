@@ -1,1 +1,7 @@
-The FJSSP is an optimization problem where jobs, consisting of operations processed on machines with specific times, must be scheduled to minimize makespan, reduce time between operations in the same job, and balance machine load, while ensuring operations are processed sequentially and without machine conflicts.
+The FJSSP is an optimization problem where jobs, consisting of operations processed on machines with specific times, must be scheduled to minimize makespan, reduce time between operations in the same job, and balance machine load. 
+
+Ensure constrains are respected:
+
+    - Operation feasibility: Operations must be performed in corresponding machines with corresponding processing times.
+    - Machine feasibility: Machines can only perform one operations at the same time.
+    - Sequence feasibility: Operations at the same job must be performed sequentially in order.

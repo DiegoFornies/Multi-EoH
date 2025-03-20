@@ -1,0 +1,5 @@
+{broken_function}
+This function is incorrect and produces the following error or infeasibility: {error}
+Your objective is to modify this function and solve the error:
+    - Describe briefly where the error occurs and how to solve it.
+    - Return a new version of the function solving the error.
