@@ -1,0 +1,59 @@
+
+def heuristic(input_data):
+    """
+    A heuristic for solving the Flexible Job Shop Scheduling Problem (FJSSP).
+    This heuristic prioritizes minimizing makespan and balancing machine load
+    while respecting operation, machine, and sequence constraints.
+
+    Args:
+        input_data (dict): A dictionary containing the problem instance data.
+
+    Returns:
+        dict: A dictionary representing the schedule, where keys are job numbers
+              and values are lists of operation schedules.
+    """
+
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    # Initialize schedule and machine availability times
+    schedule = {}
+    machine_availability = {m: 0 for m in range(n_machines)}
+    job_completion_times = {j: 0 for j in range(1, n_jobs + 1)}  #completion time for each job, initially 0
+
+    # Iterate through jobs and operations, prioritizing shorter operations and less loaded machines
+    for job in range(1, n_jobs + 1):
+        schedule[job] = []
+        for op_idx, operation in enumerate(jobs[job]):
+            machines, times = operation
+
+            # Find the best machine for the operation based on availability and processing time
+            best_machine, min_end_time = -1, float('inf')
+            for m_idx, machine in enumerate(machines):
+                processing_time = times[m_idx]
+                start_time = max(machine_availability[machine], job_completion_times[job]) # Ensure machine is available and job sequence maintained
+                end_time = start_time + processing_time
+
+                if end_time < min_end_time:
+                    min_end_time = end_time
+                    best_machine = machine
+
+            # Schedule the operation on the best machine
+            processing_time = times[machines.index(best_machine)]
+            start_time = max(machine_availability[best_machine], job_completion_times[job])
+            end_time = start_time + processing_time
+
+            schedule[job].append({
+                'Operation': op_idx + 1,
+                'Assigned Machine': best_machine,
+                'Start Time': start_time,
+                'End Time': end_time,
+                'Processing Time': processing_time
+            })
+
+            # Update machine availability and job completion time
+            machine_availability[best_machine] = end_time
+            job_completion_times[job] = end_time
+
+    return schedule

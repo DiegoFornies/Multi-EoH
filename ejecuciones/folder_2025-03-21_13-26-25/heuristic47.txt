@@ -1,0 +1,77 @@
+
+def heuristic(input_data):
+    """Hybrid heuristic: Job priority (SPT), load balance, and job aging."""
+
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    schedule = {}
+    machine_available_times = {m: 0 for m in range(n_machines)}
+    job_last_end_times = {j: 0 for j in range(1, n_jobs + 1)}
+    job_priorities = {j: sum(min(times) for _, times in jobs[j]) for j in range(1, n_jobs + 1)} #SPT
+    operation_counter = {job: 0 for job in range(1, n_jobs + 1)}
+
+    ready_operations = []
+    for job_id, operations in jobs.items():
+        ready_operations.append((job_id, 0))
+
+    while ready_operations:
+        best_job, best_op_idx, best_machine, best_start_time, best_processing_time, best_priority = None, None, None, float('inf'), None, float('inf')
+
+        for job_id, op_idx in ready_operations:
+            machines, times = jobs[job_id][op_idx]
+            
+            for m_idx, machine in enumerate(machines):
+                processing_time = times[m_idx]
+                start_time = max(machine_available_times[machine], job_last_end_times[job_id])
+                priority = start_time + job_priorities[job_id]
+
+                if priority < best_priority:
+                    best_job, best_op_idx, best_machine, best_start_time, best_processing_time, best_priority = job_id, op_idx, machine, start_time, processing_time, priority
+
+        job_id = best_job
+        op_idx = best_op_idx
+        machine = best_machine
+        start_time = best_start_time
+        processing_time = best_processing_time
+        end_time = start_time + processing_time
+
+        # Load Balancing
+        for m_idx, alt_machine in enumerate(jobs[job_id][op_idx][0]):
+            if alt_machine != machine:
+                alt_processing_time = jobs[job_id][op_idx][1][m_idx]
+                alt_start_time = max(machine_available_times[alt_machine], job_last_end_times[job_id])
+                if alt_start_time < end_time * 1.1 and machine_available_times[alt_machine] < machine_available_times[machine]:
+                    machine = alt_machine
+                    start_time = alt_start_time
+                    processing_time = alt_processing_time
+                    end_time = alt_start_time + alt_processing_time
+
+        if job_id not in schedule:
+            schedule[job_id] = []
+
+        operation_number = operation_counter[job_id] + 1
+        operation_counter[job_id] = operation_number
+
+        schedule[job_id].append({
+            'Operation': operation_number,
+            'Assigned Machine': machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': processing_time
+        })
+
+        machine_available_times[machine] = end_time
+        job_last_end_times[job_id] = end_time
+
+        ready_operations.remove((job_id, op_idx))
+
+        if op_idx + 1 < len(jobs[job_id]):
+            ready_operations.append((job_id, op_idx + 1))
+
+        for job_id_priority in range(1, n_jobs+1):
+            if job_id_priority != best_job and (job_id_priority, 0) in ready_operations:
+                job_priorities[job_id_priority] += 1 #Job Aging
+                
+    return schedule

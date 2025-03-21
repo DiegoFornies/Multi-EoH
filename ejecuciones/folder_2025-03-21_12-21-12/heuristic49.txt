@@ -1,0 +1,72 @@
+
+def heuristic(data):
+    """
+    Generates a schedule for the Flexible Job Shop Scheduling Problem (FJSSP)
+    using a greedy heuristic approach, prioritizing minimizing makespan and separation.
+    """
+    n_jobs = data['n_jobs']
+    n_machines = data['n_machines']
+    jobs = data['jobs']
+
+    # Initialize the schedule and machine availability
+    schedule = {}
+    machine_available_time = {m: 0 for m in range(1, n_machines + 1)}
+
+    # Create a priority queue for operations, sorted by shortest processing time
+    import heapq
+    operation_queue = []
+    for job_id, job_operations in jobs.items():
+        if job_id not in schedule:
+            schedule[job_id] = []
+        if len(job_operations) > 0:
+            # Get processing times of first operation
+            machines, times = job_operations[0]
+            min_time = float('inf')
+            for time in times:
+                min_time = min(min_time, time)
+
+            heapq.heappush(operation_queue, (min_time, job_id, 0))  # (processing_time, job_id, operation_index)
+
+    while operation_queue:
+        processing_time, job_id, operation_index = heapq.heappop(operation_queue)
+        operation = jobs[job_id][operation_index]
+        machines, times = operation
+
+        # Find the best machine and start time for the operation
+        best_machine = None
+        best_start_time = float('inf')
+        best_processing_time = None
+
+        for i, machine in enumerate(machines):
+            start_time = machine_available_time[machine]
+            processing_time = times[i]
+            if start_time < best_start_time:
+                best_start_time = start_time
+                best_machine = machine
+                best_processing_time = processing_time
+
+        # Schedule the operation on the selected machine
+        start_time = best_start_time
+        end_time = start_time + best_processing_time
+
+        schedule[job_id].append({
+            'Operation': operation_index + 1,
+            'Assigned Machine': str(best_machine),
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': best_processing_time
+        })
+
+        # Update machine availability
+        machine_available_time[best_machine] = end_time
+
+        # Add the next operation of the job to the queue
+        next_operation_index = operation_index + 1
+        if next_operation_index < len(jobs[job_id]):
+            machines, times = jobs[job_id][next_operation_index]
+            min_time = float('inf')
+            for time in times:
+                min_time = min(min_time, time)
+            heapq.heappush(operation_queue, (min_time, job_id, next_operation_index))
+
+    return schedule

@@ -3,10 +3,8 @@ import traceback
 import copy
 
 class Individual:
-    _counter = 0
-    def __init__(self, description, code, reader, llmmanager, folder_path):
-        self.id = Individual._counter #id único para cada individuo
-        Individual._counter += 1
+    def __init__(self, description, code, reader, llmmanager, folder_path, id):
+        self.id = id #id único para cada individuo
         self.description = description  #Descripción del individuo
         self.code = code  #Código del individuo (su heurística)
         self.base_evaluation = None
@@ -16,7 +14,7 @@ class Individual:
         self.crowding_distance = None
         self.vector_distance = {}
         self.valid = False
-        self.max_repair = 0
+        self.max_repair = 1
         self.front = None
         self.Reader = reader
         self.LLMManager = llmmanager
@@ -41,20 +39,22 @@ class Individual:
                             for of_name, _ in of.items():
                                 evaluation[instance_name][of_name] = results[of_name]
                         else:
-                            self.repair(f)
+                            if repair_counter < self.max_repair:
+                                self.repair(f)
                             repair_counter += 1
                             evaluation = 'Infeasible'
                             self.valid = False
                             break
                 except Exception as e:
-                    #self.repair(traceback.format_exc())
+                    if repair_counter < self.max_repair:
+                        self.repair(traceback.format_exc())
                     repair_counter += 1
                     evaluation = 'Code Error'
                     self.valid = False
             self.base_evaluation = evaluation
 
     def repair(self, message):
-        #print(message)
+        print(message)
         #print('Old: ', self.code)
         system_prompt, user_prompt = self.Reader.get_repair_prompt(self.code, message)
         #print(system_prompt, user_prompt)

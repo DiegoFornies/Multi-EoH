@@ -9,9 +9,10 @@ class LLMClient:
         self.counter = 1
 
     def query(self, system_prompt, user_prompt):
+        time.sleep(1)
         content = self.model.generate_content(system_prompt + '\n' + user_prompt).text
         self.counter += 1
-        if(self.counter % 15 == 0):
+        if(self.counter % 12 == 0):
             print('Esperando...')
             time.sleep(15)
         return content

@@ -1,0 +1,89 @@
+
+def heuristic(input_data):
+    """
+    A heuristic to solve the Flexible Job Shop Scheduling Problem (FJSSP).
+    This heuristic prioritizes minimizing makespan, reducing time between operations in the same job,
+    and balancing machine load.  It uses a shortest processing time (SPT) rule, considers
+    machine availability, and incorporates a lookahead to choose the operation that minimizes
+    the impact on future job completion times.
+    """
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    # Initialize data structures
+    schedule = {}
+    machine_available_times = {m: 0 for m in range(n_machines)}
+    job_last_end_times = {j: 0 for j in range(1, n_jobs + 1)}
+    job_remaining_work = {}  # Estimated remaining work for each job
+
+    # Initialize remaining work for each job
+    for job_id, operations in jobs.items():
+        remaining_time = 0
+        for op in operations:
+            remaining_time += min(op[1])  # Approximate by minimum processing time
+        job_remaining_work[job_id] = remaining_time
+
+    # Ready operations: list of (job_id, operation_index) tuples
+    ready_operations = []
+    for job_id, operations in jobs.items():
+        ready_operations.append((job_id, 0))
+
+    # Main scheduling loop
+    while ready_operations:
+        # Choose the next operation based on a combined score: SPT + Earliest Start + Lookahead
+        best_job, best_op_idx, best_machine, best_start_time, best_processing_time, best_score = None, None, None, float('inf'), None, float('inf')
+
+        for job_id, op_idx in ready_operations:
+            machines, times = jobs[job_id][op_idx]
+            
+            for m_idx, machine in enumerate(machines):
+                processing_time = times[m_idx]
+                start_time = max(machine_available_times[machine], job_last_end_times[job_id])
+
+                # Calculate a score that considers SPT, Earliest Start, and impact on remaining job work
+                # The lower the score, the better
+
+                score = (
+                    processing_time +  # SPT
+                    start_time / 10 + # Earliest start (scaled down)
+                    job_remaining_work[job_id] / 100 # remaining work impact (scaled down)
+                )
+
+                if score < best_score:
+                    best_job, best_op_idx, best_machine, best_start_time, best_processing_time, best_score = job_id, op_idx, machine, start_time, processing_time, score
+
+        # Schedule the best operation
+        job_id = best_job
+        op_idx = best_op_idx
+        machine = best_machine
+        start_time = best_start_time
+        processing_time = best_processing_time
+        end_time = start_time + processing_time
+
+        if job_id not in schedule:
+            schedule[job_id] = []
+        
+        schedule[job_id].append({
+            'Operation': op_idx + 1,
+            'Assigned Machine': machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': processing_time
+        })
+
+        # Update machine and job availability
+        machine_available_times[machine] = end_time
+        job_last_end_times[job_id] = end_time
+
+        # Update remaining work estimate for the job
+        job_remaining_work[job_id] -= min(jobs[job_id][op_idx][1])
+        
+        # Remove the scheduled operation from ready_operations
+        ready_operations.remove((job_id, op_idx))
+        
+        # Add the next operation of the job to ready_operations, if it exists
+        if op_idx + 1 < len(jobs[job_id]):
+            ready_operations.append((job_id, op_idx + 1))
+
+    return schedule

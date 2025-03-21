@@ -1,0 +1,78 @@
+
+def heuristic(input_data):
+    """
+    A heuristic to solve the Flexible Job Shop Scheduling Problem (FJSSP).
+
+    This heuristic prioritizes jobs with fewer remaining operations and
+    machines with less workload.  It aims to minimize makespan and
+    balance machine load.
+
+    Args:
+        input_data (dict): A dictionary containing the problem data.
+
+    Returns:
+        dict: A dictionary representing the schedule, with job numbers as keys
+              and a list of operation details as values.  Each operation
+              detail is a dictionary containing 'Operation', 'Assigned Machine',
+              'Start Time', 'End Time', and 'Processing Time'.
+    """
+
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs_data = input_data['jobs']
+
+    # Initialize schedule and machine available times
+    schedule = {}
+    machine_available_time = {m: 0 for m in range(n_machines)}
+    job_completion_time = {job: 0 for job in jobs_data}
+    remaining_operations = {job: len(ops) for job, ops in jobs_data.items()}
+
+
+    # Create a list of jobs sorted by the number of remaining operations
+    eligible_jobs = list(jobs_data.keys())
+
+    while eligible_jobs:
+        # Sort jobs by remaining operations (fewest first)
+        eligible_jobs.sort(key=lambda job: remaining_operations[job])
+
+        job = eligible_jobs[0]  # Select the job with fewest remaining operations
+
+        if job not in schedule:
+            schedule[job] = []
+
+        operation_index = len(schedule[job]) + 1 # Operation number
+        machines, times = jobs_data[job][operation_index - 1] # Get data from the operation
+
+        # Find the machine with the earliest available time for this operation
+        best_machine, best_time, best_start = None, float('inf'), None
+        for i in range(len(machines)):
+            machine = machines[i]
+            processing_time = times[i]
+            start_time = max(machine_available_time[machine], job_completion_time[job])
+
+            if start_time < best_time:
+                best_machine, best_time, best_start = machine, start_time, processing_time
+
+        # Assign operation to the best machine found
+        start_time = best_time
+        end_time = start_time + best_start
+        assigned_machine = best_machine
+
+
+        schedule[job].append({
+            'Operation': operation_index,
+            'Assigned Machine': assigned_machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': best_start
+        })
+
+        # Update machine available time and job completion time
+        machine_available_time[assigned_machine] = end_time
+        job_completion_time[job] = end_time
+        remaining_operations[job] -= 1
+
+        if remaining_operations[job] == 0:
+            eligible_jobs.remove(job)
+
+    return schedule

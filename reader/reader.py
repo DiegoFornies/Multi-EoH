@@ -114,17 +114,19 @@ class Reader:
         return system_prompt, user_prompt
     
     def get_crossover_prompt(self, long_reflection, parent1, parent2):
-        system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt')
+        role_init = self.get_role()
+        system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt').replace('{long_reflection}', long_reflection).replace('{role_init}', role_init)
         user_prompt = self.read_file(f'{self.prompt_path}/user_crossover_prompt.txt')
         task_description = self.get_task_description()
 
-        user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent1}', parent1.code).replace('{parent2}', parent2.code).replace('{long_reflection}', long_reflection)
+        user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent1}', parent1.code).replace('{parent2}', parent2.code)
         return system_prompt, user_prompt
     
     def get_mutation_prompt(self, long_reflection, parent):
-        system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt')
+        role_init = self.get_role()
+        system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt').replace('{role_init}', role_init)
         user_prompt = self.read_file(f'{self.prompt_path}/user_mutation_prompt.txt')
         task_description = self.get_task_description()
 
-        user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent1}', parent.code).replace('{long_reflection}', long_reflection)
+        user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent}', parent.code).replace('{long_reflection}', long_reflection)
         return system_prompt, user_prompt

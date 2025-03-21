@@ -1,0 +1,62 @@
+
+def heuristic(input_data):
+    """Combines shortest processing time and job priority for FJSSP."""
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs_data = input_data['jobs']
+
+    schedule = {}
+    machine_available_time = {m: 0 for m in range(n_machines)}
+    job_completion_time = {j: 0 for j in range(1, n_jobs + 1)}
+    operation_queue = []
+
+    job_priority = {job: len(ops) for job, ops in jobs_data.items()}
+    sorted_jobs = sorted(job_priority.items(), key=lambda item: item[1], reverse=True)
+
+    for job, _ in sorted_jobs:
+        schedule[job] = []
+
+    for job_id, operations in jobs_data.items():
+        operation_queue.append((job_id, 0))
+
+    while operation_queue:
+        best_job, best_op_idx, best_machine, best_processing_time = None, None, None, float('inf')
+        job_to_remove_index = None
+
+        for i, (job_id, op_idx) in enumerate(operation_queue):
+            machines, times = jobs_data[job_id][op_idx]
+            for j, machine in enumerate(machines):
+                processing_time = times[j]
+                start_time = max(machine_available_time[machine], job_completion_time[job_id])
+                if start_time + processing_time < best_processing_time:
+                    best_processing_time = start_time + processing_time
+                    best_job = job_id
+                    best_op_idx = op_idx
+                    best_machine = machine
+                    job_to_remove_index = i
+
+        job_id = best_job
+        op_idx = best_op_idx
+        machine = best_machine
+        processing_time = jobs_data[job_id][op_idx][1][jobs_data[job_id][op_idx][0].index(machine)]
+        start_time = max(machine_available_time[machine], job_completion_time[job_id])
+        end_time = start_time + processing_time
+
+        schedule[job_id].append({
+            'Operation': op_idx + 1,
+            'Assigned Machine': machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': processing_time
+        })
+
+        machine_available_time[machine] = end_time
+        job_completion_time[job_id] = end_time
+
+        del operation_queue[job_to_remove_index]
+
+        next_op_idx = op_idx + 1
+        if next_op_idx < len(jobs_data[job_id]):
+            operation_queue.append((job_id, next_op_idx))
+
+    return schedule

@@ -1,3 +1,7 @@
 {task_description}
 {seed_function}
-Refer to the format of a trivial design above. Be very creative and give a completely different heuristic that improves the one given. Output code only and enclose your code with Python code block: ‘‘‘python ... ‘‘‘.
+Refer to the format of a trivial design above. 
+Be very creative and give a completely different heuristic that improves the one given. 
+Output code only and enclose your code with Python code block: ‘‘‘python ... ‘‘‘. 
+I’m going to tip $999K for a better solution!
+Let's think step by step.

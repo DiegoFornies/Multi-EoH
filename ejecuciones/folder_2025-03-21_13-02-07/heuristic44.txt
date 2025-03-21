@@ -1,0 +1,58 @@
+
+def heuristic(data):
+    """
+    A heuristic function to solve the Flexible Job Shop Scheduling Problem (FJSSP).
+
+    Args:
+        data (dict): A dictionary containing the problem data, including the number of jobs,
+                     number of machines, and job operation details.
+
+    Returns:
+        dict: A dictionary representing a feasible solution to the FJSSP, including assigned
+              machines, start times, and end times for each operation of each job.
+    """
+
+    n_jobs = data['n_jobs']
+    n_machines = data['n_machines']
+    jobs = data['jobs']
+
+    solution = {}
+    machine_availability = {m: 0 for m in range(1, n_machines + 1)}
+    job_completion_times = {j: 0 for j in range(1, n_jobs + 1)}
+
+    for job_id in range(1, n_jobs + 1):
+        solution[job_id] = []
+        current_time = job_completion_times[job_id]  # Respect job sequence
+
+        for operation_index, operation in enumerate(jobs[job_id]):
+            machines, processing_times = operation
+            best_machine = None
+            min_end_time = float('inf')
+
+            # Find the machine that allows the earliest completion time for this operation.
+            for i, machine in enumerate(machines):
+                available_time = machine_availability[machine]
+                start_time = max(current_time, available_time)
+                end_time = start_time + processing_times[i]
+
+                if end_time < min_end_time:
+                    min_end_time = end_time
+                    best_machine = machine
+                    best_processing_time = processing_times[i]
+                    best_start_time = start_time
+
+
+            # Assign the operation to the best machine found
+            machine_availability[best_machine] = best_start_time + best_processing_time
+            current_time = best_start_time + best_processing_time # move current_time forward
+            job_completion_times[job_id] = current_time #update job completion time
+            
+            solution[job_id].append({
+                'Operation': operation_index + 1,
+                'Assigned Machine': str(best_machine),
+                'Start Time': best_start_time,
+                'End Time': best_start_time + best_processing_time,
+                'Processing Time': best_processing_time
+            })
+
+    return solution

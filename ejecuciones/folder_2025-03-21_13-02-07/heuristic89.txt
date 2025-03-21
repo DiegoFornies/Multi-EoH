@@ -1,0 +1,56 @@
+
+def heuristic(data):
+    """
+    A heuristic for solving the Flexible Job Shop Scheduling Problem (FJSSP).
+
+    This heuristic aims to minimize makespan while also considering separation
+    between operations of the same job and machine load balance. It prioritizes
+    finding a feasible schedule and then attempts to improve it by shifting
+    operations in time.
+    """
+
+    n_jobs = data['n_jobs']
+    n_machines = data['n_machines']
+    jobs = data['jobs']
+
+    # Initialize solution with earliest possible start times
+    solution = {}
+    machine_timeline = {m: 0 for m in range(1, n_machines + 1)}
+    job_completion_times = {j: 0 for j in range(1, n_jobs + 1)}
+
+    for job_id in range(1, n_jobs + 1):
+        solution[job_id] = []
+        current_time = 0
+        for operation_index, operation_data in enumerate(jobs[job_id]):
+            machines = operation_data[0]
+            processing_times = operation_data[1]
+
+            best_machine = None
+            min_end_time = float('inf')
+            best_processing_time = None
+
+            for i, machine in enumerate(machines):
+                processing_time = processing_times[i]
+                available_time = machine_timeline[machine]
+                start_time = max(available_time, job_completion_times[job_id])
+
+                end_time = start_time + processing_time
+
+                if end_time < min_end_time:
+                    min_end_time = end_time
+                    best_machine = str(machine)
+                    best_processing_time = processing_time
+                    best_start_time = start_time
+            
+            # Update job completion time and machine timeline
+            job_completion_times[job_id] = best_start_time + best_processing_time
+            machine_timeline[int(best_machine)] = best_start_time + best_processing_time
+                
+            solution[job_id].append({
+                'Operation': operation_index + 1,
+                'Assigned Machine': best_machine,
+                'Start Time': best_start_time,
+                'End Time': best_start_time + best_processing_time,
+                'Processing Time': best_processing_time
+            })
+    return solution

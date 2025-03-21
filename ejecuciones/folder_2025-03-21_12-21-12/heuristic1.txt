@@ -1,0 +1,72 @@
+
+def heuristic(input_data):
+    """
+    A heuristic algorithm for solving the Flexible Job Shop Scheduling Problem (FJSSP).
+    This heuristic considers machine load balancing and job completion time.
+    """
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    # Initialize data structures
+    machine_available_time = {m: 0 for m in range(n_machines)}
+    job_completion_time = {j: 0 for j in range(1, n_jobs + 1)}
+    machine_loads = {m: 0 for m in range(n_machines)} # Track load on each machine
+
+    solution = {}
+    
+    # Build a list of operations, prioritizing jobs with fewer remaining operations
+    operations_list = []
+    for job_id, operations in jobs.items():
+        for op_idx, operation_data in enumerate(operations):
+            operations_list.append((job_id, op_idx + 1, operation_data)) # (job_id, op_number, operation data)
+    
+    # sort operation_list based on the length of the job, shortest first
+    operations_list.sort(key = lambda x: len(jobs[x[0]]))
+
+    # Iterate through operations and assign them to machines
+    while operations_list:
+        # Prioritize jobs with the earliest release time and consider machine load
+        best_job, best_op_idx, best_operation_data = operations_list[0]
+        min_end_time = float('inf')
+        best_machine = None
+        best_processing_time = None
+        
+        machines, times = best_operation_data
+        
+        for machine_index, processing_time in zip(machines, times):
+            start_time = max(machine_available_time[machine_index], job_completion_time[best_job])
+            end_time = start_time + processing_time
+            
+            # Prioritize machines with lower load
+            load_penalty = machine_loads[machine_index] # Simple load penalty
+            
+            if end_time + load_penalty < min_end_time:
+                min_end_time = end_time + load_penalty
+                best_machine = machine_index
+                best_processing_time = processing_time
+                
+        start_time = max(machine_available_time[best_machine], job_completion_time[best_job])
+        end_time = start_time + best_processing_time
+        
+        # Update schedule
+        if best_job not in solution:
+            solution[best_job] = []
+        
+        solution[best_job].append({
+            'Operation': best_op_idx,
+            'Assigned Machine': best_machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': best_processing_time
+        })
+        
+        # Update machine availability and job completion time
+        machine_available_time[best_machine] = end_time
+        job_completion_time[best_job] = end_time
+        machine_loads[best_machine] += best_processing_time  # Increase machine load
+        
+        # Remove the assigned operation
+        operations_list.remove((best_job, best_op_idx, best_operation_data))
+    
+    return solution

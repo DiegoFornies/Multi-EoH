@@ -1,0 +1,51 @@
+
+def heuristic(input_data):
+    """Combines earliest start time with machine load balancing."""
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    machine_available_time = {m: 0 for m in range(n_machines)}
+    job_completion_time = {j: 0 for j in range(1, n_jobs + 1)}
+    machine_loads = {m: 0 for m in range(n_machines)}
+
+    solution = {}
+
+    for job_id, operations in jobs.items():
+        solution[job_id] = []
+        for op_idx, operation_data in enumerate(operations, 1):
+            machines, times = operation_data
+            best_machine = None
+            min_priority = float('inf')
+            best_processing_time = None
+            earliest_start_time = float('inf')
+
+            for machine_index, processing_time in zip(machines, times):
+                start_time = max(machine_available_time[machine_index], job_completion_time[job_id])
+                end_time = start_time + processing_time
+                
+                # Try to balance the machine load. Add a bias for the earliest start time
+                priority = end_time + 0.05 * machine_loads[machine_index] + 0.01 * processing_time + 0.1 * start_time
+                
+                if priority < min_priority:
+                    min_priority = priority
+                    best_machine = machine_index
+                    best_processing_time = processing_time
+                    earliest_start_time = start_time
+
+            start_time = max(machine_available_time[best_machine], job_completion_time[job_id])
+            end_time = start_time + best_processing_time
+
+            solution[job_id].append({
+                'Operation': op_idx,
+                'Assigned Machine': best_machine,
+                'Start Time': start_time,
+                'End Time': end_time,
+                'Processing Time': best_processing_time
+            })
+
+            machine_available_time[best_machine] = end_time
+            job_completion_time[job_id] = end_time
+            machine_loads[best_machine] += best_processing_time
+
+    return solution

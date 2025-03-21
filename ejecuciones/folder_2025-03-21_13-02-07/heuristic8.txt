@@ -1,0 +1,93 @@
+
+def heuristic(input_data):
+    """
+    A heuristic for the Flexible Job Shop Scheduling Problem (FJSSP).
+
+    This heuristic aims to minimize makespan by considering machine load balance and operation dependencies.
+    It prioritizes operations with fewer machine choices and assigns them to the least loaded machine.
+
+    Args:
+        input_data (dict): A dictionary containing the problem data.
+
+    Returns:
+        dict: A dictionary representing the schedule.
+    """
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    schedule = {}
+    machine_load = {m: 0 for m in range(n_machines)}  # Track machine load
+    job_completion_time = {j: 0 for j in jobs}  # Track job completion times
+    
+    eligible_operations = {} #store eligibale operations for each job. operations are eligible once their previous operations are done
+    for job_id in jobs.keys():
+        eligible_operations[job_id] = 1 #initially the first operation for each job is eligible
+    
+    completed_operations = {}
+    for job_id in jobs.keys():
+        completed_operations[job_id] = 0
+    
+    operation_count = {}
+    for job_id in jobs.keys():
+        operation_count[job_id] = len(jobs[job_id])
+
+    scheduled_operations = 0
+    total_operations = sum([len(job) for job in jobs.values()])
+
+    while scheduled_operations < total_operations:
+
+        # Find the next operation to schedule
+        best_job, best_op, best_machine, best_processing_time = None, None, None, float('inf')
+        min_machine_options = float('inf')
+
+        for job_id, operations in jobs.items():
+            if job_id not in schedule:
+                schedule[job_id] = []
+            
+            next_op_index = completed_operations[job_id]
+            
+            if next_op_index < len(operations):
+                op_number = next_op_index+1
+                
+                if (eligible_operations[job_id] == op_number):
+                    
+                    machines, times = operations[next_op_index]
+                    
+                    #Prioritize operations with fewer machine choices
+                    if len(machines) < min_machine_options:
+                        min_machine_options = len(machines)
+                        
+                    for i in range(len(machines)):
+                        machine, time = machines[i], times[i]
+
+                        # Consider machine load when choosing a machine. Use max
+                        # start time to respect machine and job constraints
+                        start_time = max(machine_load[machine], job_completion_time[job_id])
+                        if time < best_processing_time:
+                            best_job, best_op, best_machine, best_processing_time = job_id, op_number, machine, time
+
+        if best_job is not None:
+            start_time = max(machine_load[best_machine], job_completion_time[best_job])
+            end_time = start_time + best_processing_time
+            
+            schedule[best_job].append({
+                'Operation': best_op,
+                'Assigned Machine': best_machine,
+                'Start Time': start_time,
+                'End Time': end_time,
+                'Processing Time': best_processing_time
+            })
+
+            # Update machine load and job completion time
+            machine_load[best_machine] = end_time
+            job_completion_time[best_job] = end_time
+            
+            completed_operations[best_job] += 1
+            
+            if completed_operations[best_job] < operation_count[best_job]:
+                eligible_operations[best_job] += 1
+
+            scheduled_operations += 1
+            
+    return schedule

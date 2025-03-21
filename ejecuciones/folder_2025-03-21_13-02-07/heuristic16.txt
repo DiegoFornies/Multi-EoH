@@ -1,0 +1,76 @@
+
+def heuristic(input_data):
+    """Schedules jobs to minimize makespan and balance machine load."""
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    machine_available_time = {m: 0 for m in range(n_machines)}
+    job_completion_time = {j: 0 for j in jobs}
+    schedule = {j: [] for j in jobs}
+    operations = []
+
+    for job, operations_list in jobs.items():
+        for op_idx, (machines, times) in enumerate(operations_list):
+            operations.append({
+                'job': job,
+                'operation': op_idx + 1,
+                'machines': machines,
+                'times': times,
+                'num_machines': len(machines)
+            })
+
+    operations.sort(key=lambda op: (op['num_machines'], sum(op['times']) / len(op['times'])))
+
+    while operations:
+        best_op = None
+        best_machine = None
+        earliest_start = float('inf')
+        best_time_index = None
+
+        for op in operations:
+            job = op['job']
+            preceding_ops_scheduled = True
+            for prev_op_idx in range(1, op['operation']):
+                scheduled = False
+                for scheduled_op in schedule[job]:
+                    if scheduled_op['Operation'] == prev_op_idx:
+                        scheduled = True
+                        break
+                if not scheduled:
+                    preceding_ops_scheduled = False
+                    break
+
+            if preceding_ops_scheduled:
+                for m_idx, machine in enumerate(op['machines']):
+                    start_time = max(machine_available_time[machine], job_completion_time[job])
+
+                    if start_time < earliest_start:
+                        earliest_start = start_time
+                        best_op = op
+                        best_machine = machine
+                        best_time_index = m_idx
+
+        if best_op is not None:
+            job = best_op['job']
+            op_num = best_op['operation']
+            processing_time = best_op['times'][best_time_index]
+
+            start_time = max(machine_available_time[best_machine], job_completion_time[job])
+            end_time = start_time + processing_time
+
+            schedule[job].append({
+                'Operation': op_num,
+                'Assigned Machine': best_machine,
+                'Start Time': start_time,
+                'End Time': end_time,
+                'Processing Time': processing_time
+            })
+
+            machine_available_time[best_machine] = end_time
+            job_completion_time[job] = end_time
+            operations.remove(best_op)
+        else:
+            break
+
+    return schedule

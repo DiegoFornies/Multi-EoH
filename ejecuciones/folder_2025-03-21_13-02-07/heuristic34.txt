@@ -1,0 +1,56 @@
+
+def heuristic(input_data):
+    """Schedules jobs to minimize makespan, balancing machine load."""
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+    schedule = {}
+    machine_available = {m: 0 for m in range(n_machines)}
+    job_completion = {j: 0 for j in range(1, n_jobs + 1)}
+
+    ops = []
+    for j_id, job in jobs.items():
+        for idx, op in enumerate(job, 1):
+            ops.append((j_id, idx, op[0], op[1]))
+
+    def earliest_start(op):
+        j_id, _, _, _ = op
+        return job_completion[j_id]
+
+    ops.sort(key=earliest_start)
+
+    for j_id, op_idx, machines, times in ops:
+        best_m = None
+        min_end = float('inf')
+        best_time = None
+
+        for m_idx, m in enumerate(machines):
+            time = times[m_idx]
+            start = max(machine_available[m], job_completion[j_id])
+            end = start + time
+            if end < min_end:
+                min_end = end
+                best_m = m
+                best_time = time
+            elif end == min_end and machine_available[m] < machine_available[best_m if best_m is not None else 0]:
+                best_m = m
+                best_time = time
+
+        start = max(machine_available[best_m], job_completion[j_id])
+        end = start + best_time
+
+        if j_id not in schedule:
+            schedule[j_id] = []
+
+        schedule[j_id].append({
+            'Operation': op_idx,
+            'Assigned Machine': best_m,
+            'Start Time': start,
+            'End Time': end,
+            'Processing Time': best_time
+        })
+
+        machine_available[best_m] = end
+        job_completion[j_id] = end
+
+    return schedule

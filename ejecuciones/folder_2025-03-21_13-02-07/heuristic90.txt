@@ -1,0 +1,74 @@
+
+def heuristic(data):
+    """
+    Generates a schedule for the Flexible Job Shop Scheduling Problem (FJSSP) using a greedy heuristic.
+    Prioritizes minimizing makespan while attempting to balance machine load and reduce idle time between operations within jobs.
+
+    Args:
+        data (dict): A dictionary containing the problem definition, including:
+            - n_jobs (int): The number of jobs.
+            - n_machines (int): The number of machines.
+            - jobs (dict): A dictionary where keys are job numbers and values are lists of operations.
+                           Each operation is a tuple: (list of eligible machines, list of processing times).
+
+    Returns:
+        dict: A dictionary representing the schedule, where:
+            - Keys are job numbers.
+            - Values are lists of dictionaries, each representing an operation with:
+                - 'Operation': Operation number.
+                - 'Assigned Machine': Assigned machine number.
+                - 'Start Time': Start time of the operation.
+                - 'End Time': End time of the operation.
+                - 'Processing Time': Processing time of the operation.
+    """
+
+    n_jobs = data['n_jobs']
+    n_machines = data['n_machines']
+    jobs = data['jobs']
+
+    # Initialize schedule and machine availability
+    schedule = {}
+    machine_availability = [0] * (n_machines + 1)  # +1 to align with machine numbers starting from 1
+    job_completion_times = {}
+
+    for job_id in jobs:
+        schedule[job_id] = []
+        job_completion_times[job_id] = 0 # Initialize completion time for each job
+
+    # Schedule operations greedily, prioritizing early completion
+    for job_id in jobs:
+        current_time = 0
+        last_end_time = 0
+        for operation_index, operation in enumerate(jobs[job_id]):
+            machines, times = operation
+            best_machine = None
+            best_time = float('inf')
+            earliest_start = float('inf')
+
+            for i, machine in enumerate(machines):
+                processing_time = times[i]
+                available_time = max(machine_availability[machine], last_end_time)  #Consider job dependencies
+                if available_time + processing_time < best_time:
+                    best_time = available_time + processing_time
+                    best_machine = machine
+                    earliest_start = available_time
+
+            # Assign operation to the best machine
+            start_time = earliest_start
+            processing_time = times[machines.index(best_machine)]
+            end_time = start_time + processing_time
+
+            # Update schedule
+            schedule[job_id].append({
+                'Operation': operation_index + 1,
+                'Assigned Machine': str(best_machine),
+                'Start Time': start_time,
+                'End Time': end_time,
+                'Processing Time': processing_time
+            })
+
+            # Update machine availability and last_end_time
+            machine_availability[best_machine] = end_time
+            last_end_time = end_time  # Keep track of the completion of operations to ensure feasibility.
+        job_completion_times[job_id] = last_end_time # Update completion time after operations are done for that job
+    return schedule

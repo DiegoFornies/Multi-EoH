@@ -11,6 +11,10 @@ from datetime import datetime
 
 class NSGA_Evo(ABC):
     def __init__(self, problem_name, population_size, objective_functions, k, iterations, reference_vectors = ''):
+        self.individual_id = 0
+
+        print('start')
+
         self.Reader = Reader(problem_name)
         self.LLMManager = LLMManager()
 
@@ -18,7 +22,8 @@ class NSGA_Evo(ABC):
         self.population = []
         self.problem_name = problem_name
 
-        self.mutation_iterations = 2
+        self.mutation_iterations = round(0.1*(self.population_size))
+        
         self.crossover_iterations = self.population_size - self.mutation_iterations
         self.k = k
 
@@ -37,6 +42,8 @@ class NSGA_Evo(ABC):
         self.whole_population = []
 
         self.folder_path = self.create_execution_folder()
+
+        self.individual_id = 0
 
     def create_execution_folder(self):
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -68,14 +75,15 @@ class NSGA_Evo(ABC):
         return objective_functions
     
     def init_population(self):
-        for n in range(self.population_size):
+        for n in range(self.population_size * 2):
             system_prompt, user_prompt = self.Reader.get_initialization_prompt()
             individual = self.create_individual(system_prompt, user_prompt)
             self.population.append(individual)
 
     def create_individual(self, system_prompt, user_prompt):
         description, code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
-        return Individual(description, code, self.Reader, self.LLMManager, self.folder_path)
+        self.individual_id += 1
+        return Individual(description, code, self.Reader, self.LLMManager, self.folder_path, self.individual_id)
     
     def evaluate_population(self): #evalúa la población, la normaliza y la media.
         for individual in list(self.population):
@@ -88,9 +96,6 @@ class NSGA_Evo(ABC):
                 self.population.remove(individual)
         self.update_minmax_score()
         self.normalize_and_mean_population()
-        print('base: ', self.population[0].base_evaluation)
-        print('normalized: ', self.population[0].normalized_evaluation)
-        print('evaluation: ', self.population[0].evaluation)
 
     def update_minmax_score(self):
         for individual in self.population:
@@ -185,7 +190,7 @@ class NSGA_Evo(ABC):
             decoded_ins[name] = self.decode_instance(instance)
         return decoded_ins
     
-    def update_reflection(self, clusters):
+    def update_reflection(self, clusters, iteration):
         clusters_reflection = []
         for cluster, info in clusters.items():
             system_prompt, user_prompt = self.Reader.get_cluster_reflection_prompt(info, self.of)
@@ -193,6 +198,9 @@ class NSGA_Evo(ABC):
             clusters_reflection.append({'Centroid': info['Centroid'], 'Reflection': ref})
         system_prompt, user_prompt = self.Reader.get_long_reflection_prompt(self.long_reflection, clusters_reflection, self.of)
         self.long_reflection = self.LLMManager.get_reflection(system_prompt, user_prompt)
+
+        with open(f'{self.folder_path}/long_reflection.txt', "a") as file:
+            file.write(f'Reflection {iteration}: {self.long_reflection}')
 
     def tournament_selection_nsgaII(self, parents):
 
@@ -238,10 +246,11 @@ class NSGA_Evo(ABC):
     
     def select_best_individuals(self):
         best, _ = self.get_pareto_front(self.whole_population)
-        with open('best_heuristics.txt', "w") as file:
+        with open(f'{self.folder_path}/best_heuristics.txt', "w") as file:
             for ind in best:
                 file.write(f"""Heuristic id: {ind.id} 
                 Base evaluation: {ind.base_evaluation}\n""")
+        return best
 
     def start(self):
 
@@ -257,7 +266,7 @@ class NSGA_Evo(ABC):
             print(f'Selected.')
             self.whole_population.extend(rest)
             clusters = self.get_k_means(parents)
-            self.update_reflection(clusters)
+            self.update_reflection(clusters, i)
             print(f'Reflected.')
 
             crossover_sons = self.crossover(parents)
@@ -271,7 +280,7 @@ class NSGA_Evo(ABC):
             self.population = parents
         self.evaluate_population()
         self.whole_population.extend(parents)
-        self.select_best_individuals()
+        return self.select_best_individuals()
 
     @abstractmethod
     def feasibility(self, instance, solution):

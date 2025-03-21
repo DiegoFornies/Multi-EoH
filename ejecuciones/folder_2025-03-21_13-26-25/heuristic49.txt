@@ -1,0 +1,61 @@
+
+def heuristic(input_data):
+    """Combines SPT and job priority scheduling with load balancing."""
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs_data = input_data['jobs']
+
+    job_priorities = {}
+    for job, ops in jobs_data.items():
+        total_time = sum(min(times) for machines, times in ops)
+        job_priorities[job] = total_time
+
+    sorted_jobs = sorted(job_priorities.items(), key=lambda item: item[1], reverse=True)
+
+    schedule = {}
+    machine_availability = {m: 0 for m in range(n_machines)}
+    job_completion_times = {job: 0 for job in range(1, n_jobs + 1)}
+    operation_counter = {job: 0 for job in range(1, n_jobs + 1)}
+
+    ready_operations = []
+    for job_id, operations in jobs_data.items():
+        ready_operations.append((job_id, 0))
+
+    while ready_operations:
+        best_job, best_op_idx, best_machine, best_start_time, best_processing_time = None, None, None, float('inf'), None
+
+        for job_id, op_idx in ready_operations:
+            if job_id not in schedule:
+                schedule[job_id] = []
+            machines, times = jobs_data[job_id][op_idx]
+            
+            for m_idx, machine in enumerate(machines):
+                processing_time = times[m_idx]
+                start_time = max(machine_availability[machine], job_completion_times[job_id])
+                if start_time < best_start_time:
+                    best_job, best_op_idx, best_machine, best_start_time, best_processing_time = job_id, op_idx, machine, start_time, processing_time
+
+        job_id = best_job
+        op_idx = best_op_idx
+        machine = best_machine
+        start_time = best_start_time
+        processing_time = best_processing_time
+        end_time = start_time + processing_time
+
+        schedule[job_id].append({
+            'Operation': op_idx + 1,
+            'Assigned Machine': machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': processing_time
+        })
+
+        machine_availability[machine] = end_time
+        job_completion_times[job_id] = end_time
+
+        ready_operations.remove((job_id, op_idx))
+
+        if op_idx + 1 < len(jobs_data[job_id]):
+            ready_operations.append((job_id, op_idx + 1))
+
+    return schedule
