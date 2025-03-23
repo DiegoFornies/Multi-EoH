@@ -1,32 +1,41 @@
 import random
 import traceback
 import copy
+import json
 
 class Individual:
-    def __init__(self, description, code, reader, llmmanager, folder_path, id):
+    def __init__(self, code, reader, llmmanager, folder_path, id, iteration):
         self.id = id #id único para cada individuo
-        self.description = description  #Descripción del individuo
+
         self.code = code  #Código del individuo (su heurística)
+
         self.base_evaluation = None
         self.normalized_evaluation = None  #Evaluación del individuo completa
         self.evaluation = None #Evaluación del individuo mediada y normalizada
         self.evaluated = False
-        self.crowding_distance = None
-        self.vector_distance = {}
+
         self.valid = False
         self.max_repair = 1
+        self.repair_counter = 0
+
+        self.iteration_creation = iteration
+
         self.front = None
+        self.crowding_distance = None
+        self.vector_distance = {}
+
         self.Reader = reader
         self.LLMManager = llmmanager
+
         self.folder_path = folder_path
 
-        with open(f"{folder_path}/heuristic{self.id}.txt", "w") as file:
+        self.code_file = f'{self.folder_path}/heuristics/heuristic{self.id}.py'
+        with open(self.code_file, 'w') as file:
             file.write(self.code)
 
     def evaluate(self, instances, objective_functions, feasibility, of): #devuelve false si infeasible
         if not self.evaluated:
-            repair_counter = 0
-            while not self.valid and repair_counter <= self.max_repair:
+            while not self.valid and self.repair_counter <= self.max_repair:
                 evaluation = {}
                 try:
                     solutions = self.get_solutions(instances)
@@ -34,31 +43,40 @@ class Individual:
                         f = feasibility(instances[instance_name], solution)
                         if f == True:
                             self.valid = True
-                            results = objective_functions(solution)
+                            results = objective_functions(instances[instance_name], solution)
                             evaluation[instance_name] = {}
                             for of_name, _ in of.items():
                                 evaluation[instance_name][of_name] = results[of_name]
                         else:
-                            if repair_counter < self.max_repair:
+                            if self.repair_counter < self.max_repair:
                                 self.repair(f)
-                            repair_counter += 1
+                            self.repair_counter += 1
                             evaluation = 'Infeasible'
                             self.valid = False
                             break
                 except Exception as e:
-                    if repair_counter < self.max_repair:
+                    if self.repair_counter < self.max_repair:
                         self.repair(traceback.format_exc())
-                    repair_counter += 1
+                    self.repair_counter += 1
                     evaluation = 'Code Error'
                     self.valid = False
             self.base_evaluation = evaluation
 
+            #guardamos información del heurístico en un json
+
+            with open(f'{self.folder_path}/heuristics_data.json', 'r') as archivo_json:
+                datos = json.load(archivo_json)
+
+            datos.append(self.to_dict())
+
+            with open(f'{self.folder_path}/heuristics_data.json', 'w') as archivo_json:
+                json.dump(datos, archivo_json, indent=4)
+
     def repair(self, message):
-        print(message)
         #print('Old: ', self.code)
         system_prompt, user_prompt = self.Reader.get_repair_prompt(self.code, message)
         #print(system_prompt, user_prompt)
-        self.description, self.code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
+        self.code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
         #print('New: ', self.code)
         return ''
 
@@ -130,3 +148,12 @@ class Individual:
             if self.evaluation[of_name] < ind.evaluation[of_name]:
                 dominated = True
         return dominated
+    
+    def to_dict(self):
+        individual = {'id': self.id,
+                      'code file': self.code_file,
+                      'valid': self.valid,
+                      'generation': self.iteration_creation,
+                      'repair counter': self.repair_counter,
+                      'evaluation': self.base_evaluation}
+        return individual

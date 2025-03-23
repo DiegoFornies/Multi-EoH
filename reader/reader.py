@@ -79,7 +79,7 @@ class Reader:
 
         individuals_info = ''
         for individual in individuals:
-            individuals_info += f'Heuristic {individual.id}: \nDescription: {individual.description} \nCode: {individual.code}\n'
+            individuals_info += f'Heuristic {individual.id} \nCode: {individual.code}\n'
 
         performance = ''
 
@@ -100,7 +100,7 @@ class Reader:
                 performance += f'{of_name}: {centroid[num]}     '
             reflection = cluster['Reflection']
             clusters_reflections += f'Cluster general performance: {performance}\nCluster reflection: {reflection}\n'
-        user_prompt = user_prompt.replace('{clusters_reflections}', performance).replace('{long_reflections}', long_reflections)
+        user_prompt = user_prompt.replace('{clusters_reflections}', clusters_reflections).replace('{long_reflections}', long_reflections)
         return system_prompt, user_prompt
     
     def get_repair_prompt(self, broken_function, error):

@@ -1,10 +1,11 @@
 {task_description}
 Current heuristics:
 {parent}
-Now, think outside the box and write a function
-better than current version but with the same idea. Preserve the input and output format.
+Now, think outside the box and write a mutated function
+better than current version.
 You can using some hints if need:
 {long_reflection}
 Output code only and enclose your code with Python
-code block: ´´´python ... ´´´.
+code block: ´´´python ... ´´´, has comment and docstring (<50
+words) to description key idea of heuristics design.
 I’m going to tip $999K for a better solution!

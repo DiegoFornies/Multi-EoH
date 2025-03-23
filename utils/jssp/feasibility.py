@@ -6,6 +6,7 @@ def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje
                 assigned_machine = int(op['Assigned Machine'])
                 job_machine_list, job_processing_times = job_operations[op_idx]
                 if assigned_machine not in job_machine_list:
+                    print(instance, solution)
                     return False
                 assigned_processing_time = op['Processing Time']
                 if assigned_processing_time != job_processing_times[job_machine_list.index(assigned_machine)]:
@@ -39,6 +40,11 @@ def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje
                     return False
         return True
     
+    sorted_solution = {}
+    
+    for job in sorted(solution.keys()):
+        sorted_solution[job] = sorted(solution[job], key=lambda op: op['Operation'])
+    solution = sorted_solution
     message = ''
     if not machine_feasibility():
         message += '\nThe heuristic does not ensure machine feasibility, as it allows multiple operations on the same machine, which is not possible.'

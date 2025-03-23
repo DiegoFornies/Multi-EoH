@@ -8,24 +8,27 @@ import numpy as np
 from sklearn.cluster import KMeans
 import os
 from datetime import datetime
+import time
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+import pandas as pd
+import json
 
 class NSGA_Evo(ABC):
-    def __init__(self, problem_name, population_size, objective_functions, k, iterations, reference_vectors = ''):
+    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reference_vectors = ''):
         self.individual_id = 0
-
-        print('start')
 
         self.Reader = Reader(problem_name)
         self.LLMManager = LLMManager()
 
         self.population_size = population_size
         self.population = []
+        self.best_heuristics = []
+
         self.problem_name = problem_name
 
         self.mutation_iterations = round(0.1*(self.population_size))
-        
         self.crossover_iterations = self.population_size - self.mutation_iterations
-        self.k = k
 
         self.instances = self.get_instances()
 
@@ -38,32 +41,43 @@ class NSGA_Evo(ABC):
         self.reference_vectors = reference_vectors
 
         self.max_evolutions = iterations
+        self.iteration = 0
 
         self.whole_population = []
 
-        self.folder_path = self.create_execution_folder()
+        if execution_name == '':
+            execution_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.folder_path = os.path.join("ejecuciones", execution_name)
+        self.create_execution_folder()
 
         self.individual_id = 0
 
+        self.total_heuristics = 0
+        self.correct_heuristics = 0
+        self.infeasible_heuristics = 0
+        self.incorrect_heuristics = 0
+        self.repaired_heuristics = 0
+
     def create_execution_folder(self):
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        base_path = os.path.join("ejecuciones", f"folder_{timestamp}")
+        os.makedirs(self.folder_path)
+        os.makedirs(self.folder_path+'/heuristics')
 
-        os.makedirs(base_path)
+        heuristics_data_path = os.path.join(self.folder_path, "heuristics_data.json")
+        parameters_path = os.path.join(self.folder_path, "parameters.json")
 
-        parameters_file = os.path.join(base_path, "parameters.txt")
+        with open(heuristics_data_path, 'w') as archivo_json:
+                json.dump([], archivo_json, indent=4)
 
-        with open(parameters_file, "w") as file:
-            file.write(f"""Population size: {self.population_size} 
-            Problem name: {self.problem_name}
-            Max evolutions: {self.max_evolutions}
-            Crossover: {self.crossover_iterations}
-            Mutation: {self.mutation_iterations}
-            K: {self.k}""")
+        parameters = {'population size': self.population_size,
+                      'problem name': self.problem_name,
+                      'max evolutions': self.max_evolutions,
+                      'crossover': self.crossover_iterations,
+                      'mutation': self.mutation_iterations}
+        
+        with open(parameters_path, 'w') as archivo_json:
+                json.dump(parameters, archivo_json, indent=4)
             
-        return base_path
-
     def init_objective_functions_info(self, objective_functions):
         for _, of_info in objective_functions.items():
             of_info['max_score'] = {}
@@ -81,19 +95,27 @@ class NSGA_Evo(ABC):
             self.population.append(individual)
 
     def create_individual(self, system_prompt, user_prompt):
-        description, code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
+        code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
         self.individual_id += 1
-        return Individual(description, code, self.Reader, self.LLMManager, self.folder_path, self.individual_id)
+        self.total_heuristics += 1
+        return Individual(code, self.Reader, self.LLMManager, self.folder_path, self.individual_id, self.iteration)
     
     def evaluate_population(self): #evalúa la población, la normaliza y la media.
         for individual in list(self.population):
-            individual.evaluate(self.instances, self.objective_functions, self.feasibility, self.of) #guarda la evaluación en individual y devuelve si es feasible o no
-            if individual.base_evaluation == 'Infeasible':
-                print(f'El heurístico {individual.id} no es feasible, se elimina.')
-                self.population.remove(individual) #eliminamos los individuos que sean infeasibles
-            if individual.base_evaluation == 'Code Error':
-                print(f'El heurístico {individual.id} tiene errores en el código, se elimina.')
-                self.population.remove(individual)
+            if not individual.base_evaluation:
+                individual.evaluate(self.instances, self.objective_functions, self.feasibility, self.of) #guarda la evaluación en individual y devuelve si es feasible o no
+                if individual.base_evaluation == 'Infeasible':
+                    print(f'El heurístico {individual.id} no es feasible, se elimina.')
+                    self.infeasible_heuristics += 1
+                    self.population.remove(individual) #eliminamos los individuos que sean infeasibles
+                elif individual.base_evaluation == 'Code Error':
+                    print(f'El heurístico {individual.id} tiene errores en el código, se elimina.')
+                    self.incorrect_heuristics += 1
+                    self.population.remove(individual)
+                elif individual.repair_counter > 0:
+                    self.repaired_heuristics += 1
+                else:
+                    self.correct_heuristics += 1
         self.update_minmax_score()
         self.normalize_and_mean_population()
 
@@ -138,7 +160,6 @@ class NSGA_Evo(ABC):
             front_num += 1
         return global_front, current_population
 
-
     def select_parents_III(self): #utilizando NSGA III
         k = self.population_size // len(self.reference_vectors)
         rest = self.population_size % len(self.reference_vectors) #iremos añadiendo el resto por orden de vector referencia
@@ -173,15 +194,30 @@ class NSGA_Evo(ABC):
     
     def get_k_means(self, population):
         evaluations = np.array([list(ind.evaluation.values()) for ind in population])
-        k = self.k
-        if len(self.population) < self.k:
-            k = len(self.population)
+        k = self.select_best_k(evaluations, population)
         kmeans = KMeans(n_clusters=k, random_state=42)
         kmeans.fit(evaluations)
         clusters = {label:{'Individuals': [], 'Centroid': centroid} for label, centroid in enumerate(kmeans.cluster_centers_)} #guardamos centroide y individuo para cada cluster
         for ind, label in zip(population, kmeans.labels_):
             clusters[label]['Individuals'].append(ind)
         return clusters
+    
+    def select_best_k(self, evaluations, population): #Método de silueta
+        silhouette_scores = []
+        max_k = len(population) // 2
+        if max_k <= 2:
+            return max_k
+        range_k = range(2, max_k + 1)
+
+        for k in range_k:
+            kmeans = KMeans(n_clusters=k, random_state=42)
+            kmeans.fit(evaluations)
+            score = silhouette_score(evaluations, kmeans.labels_)
+            silhouette_scores.append(score)
+
+        best_k = range_k[np.argmax(silhouette_scores)]
+        print(best_k)
+        return best_k
 
     def get_instances(self):
         instances = self.Reader.get_instances()
@@ -203,7 +239,6 @@ class NSGA_Evo(ABC):
             file.write(f'Reflection {iteration}: {self.long_reflection}')
 
     def tournament_selection_nsgaII(self, parents):
-
         if len(parents) == 1:
             return random.sample(parents, 1)
         parent1, parent2 = random.sample(parents, 2)
@@ -225,9 +260,7 @@ class NSGA_Evo(ABC):
             parents_without_parent1 = list(filter(lambda p: p != parent1, parents))
             parent2 = self.tournament_selection_nsgaII(parents_without_parent1) #seleccionamos población sin parent2
             sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossover_prompt(self.long_reflection, parent1, parent2)
-            #print(sCrossover_prompt, uCrossover_prompt)
             son = self.create_individual(sCrossover_prompt, uCrossover_prompt)
-            #print(son.code)
             sons.append(son)
         return sons
     
@@ -244,19 +277,15 @@ class NSGA_Evo(ABC):
             sons.append(son)
         return sons
     
-    def select_best_individuals(self):
-        best, _ = self.get_pareto_front(self.whole_population)
-        with open(f'{self.folder_path}/best_heuristics.txt', "w") as file:
-            for ind in best:
-                file.write(f"""Heuristic id: {ind.id} 
-                Base evaluation: {ind.base_evaluation}\n""")
-        return best
+    def select_best_individuals(self, population):
+        best_heuristics, _ = self.get_pareto_front(population)
+        return best_heuristics
 
     def start(self):
-
+        start_time = time.time()
         self.init_population()
-        for i in range(self.max_evolutions):
-            print(f'Starting evolution {i}...')
+        while self.iteration < self.max_evolutions:
+            print(f'Starting evolution {self.iteration}...')
             self.evaluate_population()
             print(f'Evaluated.')
             if len(self.population) == 0:
@@ -266,9 +295,10 @@ class NSGA_Evo(ABC):
             print(f'Selected.')
             self.whole_population.extend(rest)
             clusters = self.get_k_means(parents)
-            self.update_reflection(clusters, i)
+            self.update_reflection(clusters, self.iteration)
             print(f'Reflected.')
 
+            self.iteration += 1
             crossover_sons = self.crossover(parents)
             print(f'Crossover done.')
             mutation_sons = self.elitist_mutation(parents)
@@ -278,16 +308,42 @@ class NSGA_Evo(ABC):
             parents.extend(mutation_sons)
 
             self.population = parents
+
         self.evaluate_population()
         self.whole_population.extend(parents)
-        return self.select_best_individuals()
+        
+        end_time = time.time()
+        self.best_heuristics = self.select_best_individuals(self.whole_population)
+
+        self.save_final_information(end_time - start_time)
+
+    def save_final_information(self, time):
+
+        finish_path = os.path.join(self.folder_path, "final_information.json")
+            
+        finish_information = {'total heuristics': self.total_heuristics,
+                      'correct heuristics': self.correct_heuristics,
+                      'incorrect heuristics': self.incorrect_heuristics,
+                      'infeasible heuristics': self.infeasible_heuristics,
+                      'repaired heuristics': self.repaired_heuristics,
+                      'time': time,
+                      'total petitions': self.LLMManager.LLMClient.total_petitions,
+                      'total input tokens': self.LLMManager.LLMClient.total_input_tokens,
+                      'total output tokens': self.LLMManager.LLMClient.total_output_tokens,
+                      'best heuristics': []}
+        
+        for individual in self.best_heuristics:
+            finish_information['best heuristics'].append(individual.id)
+        
+        with open(finish_path, 'w') as archivo_json:
+                json.dump(finish_information, archivo_json, indent=4)
 
     @abstractmethod
     def feasibility(self, instance, solution):
         pass
 
     @abstractmethod
-    def objective_functions(self, individual): #return a dictionary with key: name of the objective function, value: fitness in the objective function
+    def objective_functions(self, data, solution): #return a dictionary with key: name of the objective function, value: fitness in the objective function
         pass
 
     @abstractmethod

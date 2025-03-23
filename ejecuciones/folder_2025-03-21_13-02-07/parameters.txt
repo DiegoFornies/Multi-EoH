@@ -1,6 +1,0 @@
-Population size: 15 
-            Problem name: jssp
-            Max evolutions: 5
-            Crossover: 13
-            Mutation: 2 (Fails)
-            K: 3

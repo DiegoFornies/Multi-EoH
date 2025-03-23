@@ -1,7 +1,6 @@
-The FJSSP is an optimization problem where jobs, consisting of operations processed on machines with specific times, must be scheduled to minimize makespan, reduce time between operations in the same job, and balance machine load. 
+The Flexible Job Shop Scheduling Problem (FJSSP) is an optimization problem where jobs, consisting of multiple operations, must be scheduled on machines with specific processing times to minimize makespan, reduce idle time between operations in the same job, and balance machine load.
 
-Ensure constrains are respected:
-
-    - Operation feasibility: Operations must be performed in corresponding machines with corresponding processing times.
-    - Machine feasibility: Machines can only perform one operations at the same time.
-    - Sequence feasibility: Operations at the same job must be performed sequentially in order.
+Ensure that the following constraints are strictly followed:
+    -Operation feasibility: Each operation must be performed on the corresponding machine(s) and the processing time must align with the available machines.
+    -Machine feasibility: Machines can perform only one operation at a time, ensuring no overlap in their schedules.
+    -Sequence feasibility: Within the same job, operations must be executed in their defined numerical order. A subsequent operation must only start once the previous one has completed, ensuring proper sequencing and avoiding any premature execution of operations.

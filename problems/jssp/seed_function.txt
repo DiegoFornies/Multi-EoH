@@ -3,11 +3,17 @@ def heuristic(input_data):
     
     for job, ops in input_data['jobs'].items():
         schedule[job], job_time = [], 0
-        
-        for op, (machines, times) in enumerate(ops, 1):
-            m, t = machines[0], times[0]  # Tomar la primera opción disponible
-            start, end = max(machine_time[m], job_time), max(machine_time[m], job_time) + t
-            schedule[job].append({'Operation': op, 'Assigned Machine': m, 'Start Time': start, 'End Time': end, 'Processing Time': t})
-            machine_time[m], job_time = end, end
+
+        for op_idx, (machines, times) in enumerate(ops):
+            op_num = op_idx + 1
+            
+            m, t = machines[0], times[0]
+            start = max(machine_time[m], job_time)
+            end = start + t
+            
+            schedule[job].append({'Operation': op_num, 'Assigned Machine': m, 'Start Time': start, 'End Time': end, 'Processing Time': t})
+            
+            machine_time[m] = end
+            job_time = end
     
     return schedule
