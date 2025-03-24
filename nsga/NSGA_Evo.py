@@ -15,7 +15,7 @@ import pandas as pd
 import json
 
 class NSGA_Evo(ABC):
-    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reference_vectors = ''):
+    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, crossover_type, reference_vectors = ''):
         self.individual_id = 0
 
         self.Reader = Reader(problem_name)
@@ -27,14 +27,20 @@ class NSGA_Evo(ABC):
 
         self.problem_name = problem_name
 
+        self.crossover_type = crossover_type
+
         self.mutation_iterations = round(0.1*(self.population_size))
-        self.crossover_iterations = self.population_size - self.mutation_iterations
+        if self.crossover_type == 'II':
+            self.crossoverI_iterations = round(0.6 * (self.population_size))
+            self.crossoverII_iterations = self.population_size - self.crossoverI_iterations - self.mutation_iterations
+        elif self.crossover_type == 'I':
+            self.crossoverI_iterations = self.population_size - self.mutation_iterations
+            self.crossoverII_iterations = 0
 
         self.instances = self.get_instances()
 
         self.long_reflection = ''
 
-        self.crossover_prob = {}
 
         self.of = self.init_objective_functions_info(objective_functions)
 
@@ -72,7 +78,8 @@ class NSGA_Evo(ABC):
         parameters = {'population size': self.population_size,
                       'problem name': self.problem_name,
                       'max evolutions': self.max_evolutions,
-                      'crossover': self.crossover_iterations,
+                      'crossoverI': self.crossoverI_iterations,
+                      'crossoverII': self.crossoverII_iterations,
                       'mutation': self.mutation_iterations}
         
         with open(parameters_path, 'w') as archivo_json:
@@ -116,7 +123,7 @@ class NSGA_Evo(ABC):
                     self.repaired_heuristics += 1
                 else:
                     self.correct_heuristics += 1
-        self.update_minmax_score()
+        #self.update_minmax_score()
         self.normalize_and_mean_population()
 
     def update_minmax_score(self):
@@ -124,9 +131,31 @@ class NSGA_Evo(ABC):
             self.of = individual.update_minmax(self.of)
     
     def normalize_and_mean_population(self):
+
+        num_instances = len(self.instances)
+        values = {inst_name : {of_name : [] for of_name, _ in self.of.items()} for inst_name, _ in self.population[0].base_evaluation.items()}
+
+        for individual in self.population:
+            for inst_name, inst_value in individual.base_evaluation.items():
+                for of_name, of_value in inst_value.items():
+                    values[inst_name][of_name].append(of_value)
+            individual.normalized_evaluation = {inst_name : {of_name : 0 for of_name, _ in self.of.items()} for inst_name, _ in individual.base_evaluation.items()}
+        
+        for inst_name, inst_value in values.items():
+            for of_name, of_value in inst_value.items():
+                mean = np.mean(values[inst_name][of_name])
+                std = np.std(values[inst_name][of_name])
+
+                if std == 0:
+                    std = 1
+
+                for individual in self.population:
+                    individual.normalized_evaluation[inst_name][of_name] = (individual.base_evaluation[inst_name][of_name] - mean) / std
+                    if self.of[of_name]['Objective'] == 'Minimize':
+                        individual.normalized_evaluation[inst_name][of_name] = - individual.normalized_evaluation[inst_name][of_name] #para la minimización cambiamos los signos
+
         num_instances = len(self.instances)
         for individual in self.population:
-            individual.normalize(self.of)
             individual.average(self.of, num_instances)
             individual.evaluated = True
     
@@ -252,20 +281,27 @@ class NSGA_Evo(ABC):
                 return parent1
             else:
                 return parent2
-            
+    
     def crossover(self, parents): #sólo un crossover guiado por long_reflection entre dos padres
         sons = []
-        for i in range(self.crossover_iterations):
+        for i in range(self.crossoverI_iterations):
             parent1 = self.tournament_selection_nsgaII(parents)
             parents_without_parent1 = list(filter(lambda p: p != parent1, parents))
             parent2 = self.tournament_selection_nsgaII(parents_without_parent1) #seleccionamos población sin parent2
-            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossover_prompt(self.long_reflection, parent1, parent2)
+            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverI_prompt(self.long_reflection, parent1, parent2)
+            son = self.create_individual(sCrossover_prompt, uCrossover_prompt)
+            sons.append(son)
+        for i in range(self.crossoverII_iterations):
+            parent1 = self.tournament_selection_nsgaII(parents)
+            parents_without_parent1 = list(filter(lambda p: p != parent1, parents))
+            parent2 = self.tournament_selection_nsgaII(parents_without_parent1) #seleccionamos población sin parent2
+            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverII_prompt(self.long_reflection, parent1, parent2)
             son = self.create_individual(sCrossover_prompt, uCrossover_prompt)
             sons.append(son)
         return sons
     
     def elitist_mutation(self, parents): #sólo una especie de mutación cogiendo los mejores individuos del frente pareto
-        best_score = 0
+        best_score = float('-inf')
         for individual in parents:
             if individual.evaluation['Mean'] > best_score:
                 best_score = individual.evaluation['Mean']
@@ -287,6 +323,7 @@ class NSGA_Evo(ABC):
         while self.iteration < self.max_evolutions:
             print(f'Starting evolution {self.iteration}...')
             self.evaluate_population()
+            print(self.population[0].id, self.population[0].normalized_evaluation)
             print(f'Evaluated.')
             if len(self.population) == 0:
                 print('No hay ningún heurístico válido.')

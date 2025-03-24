@@ -6,7 +6,6 @@ def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje
                 assigned_machine = int(op['Assigned Machine'])
                 job_machine_list, job_processing_times = job_operations[op_idx]
                 if assigned_machine not in job_machine_list:
-                    print(instance, solution)
                     return False
                 assigned_processing_time = op['Processing Time']
                 if assigned_processing_time != job_processing_times[job_machine_list.index(assigned_machine)]:

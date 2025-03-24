@@ -1,0 +1,138 @@
+
+def heuristic(input_data):
+    """Combines SPT, machine availability, and dynamic load balancing."""
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs_data = input_data['jobs']
+
+    machine_available_time = {m: 0 for m in range(n_machines)}
+    job_completion_time = {j: 0 for j in jobs_data}
+    schedule = {j: [] for j in jobs_data}
+    job_current_operation = {j: 1 for j in jobs_data}
+
+    operations = []
+    for job_id, job in jobs_data.items():
+        for op_idx, (machines, times) in enumerate(job):
+            operations.append({
+                'job_id': job_id,
+                'op_idx': op_idx + 1,
+                'machines': machines,
+                'times': times
+            })
+
+    def calculate_machine_load(machine_id):
+        """Calculates the load of a machine."""
+        load = 0
+        for job_id in schedule:
+            for scheduled_op in schedule[job_id]:
+                if 'Assigned Machine' in scheduled_op and scheduled_op['Assigned Machine'] == machine_id:
+                    load += scheduled_op['Processing Time']
+        return load
+
+    available_operations = [op for op in operations if op['op_idx'] == job_current_operation[op['job_id']]]
+
+    while available_operations:
+        # Adaptive weight for SPT vs. machine load. Initially favor SPT.
+        spt_weight = 0.7
+        load_weight = 0.3
+
+        def operation_priority(op):
+            """Calculates the priority of an operation."""
+            job_id = op['job_id']
+            machines = op['machines']
+            times = op['times']
+
+            best_machine = None
+            min_end_time = float('inf')
+            processing_time = None
+
+            for i in range(len(machines)):
+                machine = machines[i]
+                time = times[i]
+
+                available_time = machine_available_time[machine]
+                start_time = max(available_time, job_completion_time[job_id])
+                end_time = start_time + time
+
+                if end_time < min_end_time:
+                    min_end_time = end_time
+                    best_machine = machine
+                    processing_time = time
+
+            if best_machine is None:
+                return float('inf')  # Penalize if no suitable machine
+
+            spt_score = processing_time  # Lower is better
+
+            machine_load = calculate_machine_load(best_machine)
+            load_score = machine_load # Lower is better
+
+            # Combine SPT and load scores with adaptive weights
+            priority = spt_weight * spt_score + load_weight * load_score
+            return priority
+
+        available_operations.sort(key=operation_priority)
+
+        operation = available_operations.pop(0)
+
+        job_id = operation['job_id']
+        op_idx = operation['op_idx']
+        machines = operation['machines']
+        times = operation['times']
+
+        best_machine = None
+        min_end_time = float('inf')
+        processing_time = None
+
+        for i in range(len(machines)):
+            machine = machines[i]
+            time = times[i]
+
+            available_time = machine_available_time[machine]
+            start_time = max(available_time, job_completion_time[job_id])
+            end_time = start_time + time
+
+            if end_time < min_end_time:
+                min_end_time = end_time
+                best_machine = machine
+                processing_time = time
+
+        start_time = max(machine_available_time[best_machine], job_completion_time[job_id])
+        end_time = start_time + processing_time
+
+        schedule[job_id].append({
+            'Operation': op_idx,
+            'Assigned Machine': best_machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': processing_time
+        })
+
+        machine_available_time[best_machine] = end_time
+        job_completion_time[job_id] = end_time
+        job_current_operation[job_id] += 1
+
+        # Update adaptive weights (example: adjust based on makespan)
+        makespan = max(machine_available_time.values())
+        if makespan > 100:  # Example threshold.  Adjust based on performance.
+            spt_weight -= 0.05
+            load_weight += 0.05
+            spt_weight = max(0.2, spt_weight)  # Keep within bounds
+            load_weight = min(0.8, load_weight)  # Keep within bounds
+
+        new_available_operations = []
+        for op in operations:
+            if op['op_idx'] == job_current_operation[op['job_id']]:
+                is_scheduled = False
+                for job_schedule in schedule.values():
+                    for scheduled_op in job_schedule:
+                        if 'Operation' in scheduled_op and scheduled_op['Operation'] == op['op_idx']:
+                            is_scheduled = True
+                            break
+                    if is_scheduled:
+                        break
+                if not is_scheduled:
+                    new_available_operations.append(op)
+        available_operations = new_available_operations
+
+    return schedule
