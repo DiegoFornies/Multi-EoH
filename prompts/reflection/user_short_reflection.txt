@@ -1,4 +1,4 @@
-The general cluster performance is {cluster_performance} (where 0 represents the worst performance and 1 represents the best performance in that objective function)
+The general cluster performance is {cluster_performance} (A negative z-score indicates that the value is below the mean, representing worse performance, while a positive z-score indicates the value is above the mean, representing better performance.)
 I’m going to tip $999K for the best reflection!
 Let's think step by step.
 ##Heuristics

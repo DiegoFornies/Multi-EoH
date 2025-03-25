@@ -1,0 +1,137 @@
+
+def heuristic(input_data):
+    """Greedy initial solution followed by local search to balance machine load."""
+
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    schedule = {}
+    machine_available_time = {m: 0 for m in range(n_machines)}
+    job_completion_time = {j: 0 for j in range(1, n_jobs + 1)}
+
+    # Initialize schedule
+    for job_id in range(1, n_jobs + 1):
+        schedule[job_id] = []
+
+    # Phase 1: Earliest Finish Time (EFT) Greedy
+    eligible_operations = []
+    for job_id in range(1, n_jobs + 1):
+        eligible_operations.append((job_id, 0))
+
+    while eligible_operations:
+        best_operation = None
+        best_machine = None
+        earliest_end_time = float('inf')
+
+        for job_id, op_idx in eligible_operations:
+            machines, times = jobs[job_id][op_idx]
+            for machine_idx, machine in enumerate(machines):
+                processing_time = times[machine_idx]
+                start_time = max(machine_available_time[machine], job_completion_time[job_id])
+                end_time = start_time + processing_time
+
+                if end_time < earliest_end_time:
+                    earliest_end_time = end_time
+                    best_operation = (job_id, op_idx)
+                    best_machine = (machine, processing_time)
+
+        job_id, op_idx = best_operation
+        machine, processing_time = best_machine
+
+        start_time = max(machine_available_time[machine], job_completion_time[job_id])
+        end_time = start_time + processing_time
+
+        schedule[job_id].append({
+            'Operation': op_idx + 1,
+            'Assigned Machine': machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': processing_time
+        })
+
+        machine_available_time[machine] = end_time
+        job_completion_time[job_id] = end_time
+        eligible_operations.remove((job_id, op_idx))
+
+        if op_idx + 1 < len(jobs[job_id]):
+            eligible_operations.append((job_id, op_idx + 1))
+
+    # Phase 2: Machine Reassignment (Local Search to balance)
+    def calculate_machine_load(current_schedule):
+        machine_load = {m: 0 for m in range(n_machines)}
+        for job_id in current_schedule:
+            for operation in current_schedule[job_id]:
+                machine_load[operation['Assigned Machine']] += operation['Processing Time']
+        return machine_load
+
+    def calculate_makespan(current_schedule):
+        makespan = 0
+        for job_id in current_schedule:
+            if schedule[job_id]:
+                makespan = max(makespan, schedule[job_id][-1]['End Time'])
+        return makespan
+
+    def objective_functions(current_schedule):
+        machine_load = calculate_machine_load(current_schedule)
+        makespan = calculate_makespan(current_schedule)
+        total_load = sum(machine_load.values())
+        n_machines_used = len([m for m in machine_load if machine_load[m] > 0])
+        if n_machines_used > 0:
+            balance = sum([(machine_load[m] - (total_load / n_machines_used)) ** 2 for m in machine_load if machine_load[m] > 0]) / n_machines_used
+        else:
+            balance = 0
+        separation = 0
+
+        return {'Makespan': makespan, 'Separation': separation, 'Balance': balance}
+
+    best_schedule = schedule
+    best_objectives = objective_functions(best_schedule)
+
+    # Improve balance by reassignment.
+    for job_id in range(1, n_jobs + 1):
+        for op_idx in range(len(schedule[job_id])):
+            original_machine = schedule[job_id][op_idx]['Assigned Machine']
+            machines = jobs[job_id][op_idx][0]
+
+            for new_machine in machines:
+                if new_machine != original_machine:
+                    processing_time = jobs[job_id][op_idx][1][machines.index(new_machine)]
+
+                    # Create a deep copy to avoid modifying the original schedule directly.
+                    temp_schedule = {}
+                    for k, v in schedule.items():
+                        temp_schedule[k] = [op.copy() for op in v]
+
+                    temp_schedule[job_id][op_idx]['Assigned Machine'] = new_machine
+                    temp_schedule[job_id][op_idx]['Processing Time'] = processing_time
+
+                    # Recalculate start and end times for affected operations.
+                    machine_available_time_temp = {m: 0 for m in range(n_machines)}
+                    job_completion_time_temp = {j: 0 for j in range(1, n_jobs + 1)}
+
+                    for job_id_re in range(1, n_jobs + 1):
+                        for op_idx_re in range(len(temp_schedule[job_id_re])):
+                            machine = temp_schedule[job_id_re][op_idx_re]['Assigned Machine']
+                            if op_idx_re == 0:
+                                start_time = machine_available_time_temp[machine]
+                            else:
+                                start_time = max(machine_available_time_temp[machine], temp_schedule[job_id_re][op_idx_re-1]['End Time'])
+
+                            processing_time = temp_schedule[job_id_re][op_idx_re]['Processing Time']
+                            end_time = start_time + processing_time
+
+                            temp_schedule[job_id_re][op_idx_re]['Start Time'] = start_time
+                            temp_schedule[job_id_re][op_idx_re]['End Time'] = end_time
+                            machine_available_time_temp[machine] = end_time
+                            job_completion_time_temp[job_id_re] = end_time
+
+
+                    new_objectives = objective_functions(temp_schedule)
+
+                    if new_objectives['Balance'] < best_objectives['Balance']:
+                        best_schedule = temp_schedule
+                        best_objectives = new_objectives
+                        schedule = temp_schedule
+
+    return best_schedule

@@ -39,6 +39,14 @@ def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje
                     return False
         return True
     
+    def job_feasibility():
+        if len(solution) != instance['n_jobs']:
+            return False
+        for job, operations in solution.items():
+            if len(operations) != len(instance['jobs'][job]):
+                return False
+        return True
+    
     sorted_solution = {}
     
     for job in sorted(solution.keys()):
@@ -51,6 +59,8 @@ def feasibility(instance, solution): #devuelve true si es feasible, y un mensaje
         message += '\nThe heuristic does not ensure operation feasibility, as it assigns incorrect machines or processing times to operations.'
     if not sequence_feasibility():
         message += '\nThe heuristic does not ensure sequence feasibility, as some operations of the same job are performed simultaneously, or later operations are scheduled before earlier ones.'
+    if not job_feasibility():
+        message += '\nThe heuristic does not ensure job feasibility, as some operations or jobs are missing in the solution.'
     if message == '':
         return True
     return message

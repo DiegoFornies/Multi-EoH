@@ -245,7 +245,7 @@ class NSGA_Evo(ABC):
             silhouette_scores.append(score)
 
         best_k = range_k[np.argmax(silhouette_scores)]
-        print(best_k)
+        print(f'K selected: ', best_k)
         return best_k
 
     def get_instances(self):
@@ -323,7 +323,6 @@ class NSGA_Evo(ABC):
         while self.iteration < self.max_evolutions:
             print(f'Starting evolution {self.iteration}...')
             self.evaluate_population()
-            print(self.population[0].id, self.population[0].normalized_evaluation)
             print(f'Evaluated.')
             if len(self.population) == 0:
                 print('No hay ningún heurístico válido.')

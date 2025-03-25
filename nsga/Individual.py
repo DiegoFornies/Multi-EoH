@@ -40,6 +40,7 @@ class Individual:
                 try:
                     solutions = self.get_solutions(instances)
                     for instance_name, solution in solutions.items():
+                        print(f'Checking feasibility of individual {self.id} in instance {instance_name}')
                         f = feasibility(instances[instance_name], solution)
                         if f == True:
                             self.valid = True
@@ -73,11 +74,9 @@ class Individual:
                 json.dump(datos, archivo_json, indent=4)
 
     def repair(self, message):
-        #print('Old: ', self.code)
+        print(message)
         system_prompt, user_prompt = self.Reader.get_repair_prompt(self.code, message)
-        #print(system_prompt, user_prompt)
         self.code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
-        #print('New: ', self.code)
         return ''
 
     def get_solutions(self, instances):
@@ -86,6 +85,7 @@ class Individual:
         heuristic = local_vars['heuristic']
         solutions = {}
         for name, instance in instances.items():
+            print(f'Getting solution of instance {name}')
             solutions[name] = heuristic(instance)
         del local_vars['heuristic']
         return solutions
