@@ -30,7 +30,6 @@ class LLMClient:
 
         output_tokens = self.model.count_tokens(response.text).total_tokens
         self.total_output_tokens += output_tokens
-
         self.counter += 1
         self.total_petitions += 1
 

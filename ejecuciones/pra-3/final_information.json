@@ -1,0 +1,16 @@
+{
+    "total heuristics": 12,
+    "correct heuristics": 7,
+    "incorrect heuristics": 1,
+    "infeasible heuristics": 3,
+    "repaired heuristics": 1,
+    "time": 81.8669228553772,
+    "total petitions": 20,
+    "total input tokens": 23118,
+    "total output tokens": 10927,
+    "best heuristics": [
+        4,
+        8,
+        11
+    ]
+}

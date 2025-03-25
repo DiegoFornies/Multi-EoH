@@ -2,6 +2,8 @@ import random
 import traceback
 import copy
 import json
+import threading
+import queue
 
 class Individual:
     def __init__(self, code, reader, llmmanager, folder_path, id, iteration):
@@ -29,6 +31,8 @@ class Individual:
 
         self.folder_path = folder_path
 
+        self.max_time = 120
+
         self.code_file = f'{self.folder_path}/heuristics/heuristic{self.id}.py'
         with open(self.code_file, 'w') as file:
             file.write(self.code)
@@ -40,7 +44,6 @@ class Individual:
                 try:
                     solutions = self.get_solutions(instances)
                     for instance_name, solution in solutions.items():
-                        print(f'Checking feasibility of individual {self.id} in instance {instance_name}')
                         f = feasibility(instances[instance_name], solution)
                         if f == True:
                             self.valid = True
@@ -55,6 +58,12 @@ class Individual:
                             evaluation = 'Infeasible'
                             self.valid = False
                             break
+                except TimeoutError as t:
+                    if self.repair_counter < self.max_repair:
+                        self.repair(str(t))
+                    self.repair_counter += 1
+                    evaluation = 'Time Out Error'
+                    self.valid = False
                 except Exception as e:
                     if self.repair_counter < self.max_repair:
                         self.repair(traceback.format_exc())
@@ -78,17 +87,48 @@ class Individual:
         system_prompt, user_prompt = self.Reader.get_repair_prompt(self.code, message)
         self.code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
         return ''
-
+    
     def get_solutions(self, instances):
         local_vars = {}
-        exec(self.code, globals(), local_vars)
-        heuristic = local_vars['heuristic']
+        exec(self.code, globals(), local_vars)  # Ejecutamos el código
+        heuristic = local_vars['heuristic']  # Extraemos la función heuristic
         solutions = {}
+
+        # Crear una cola para obtener los resultados de los hilos
+        result_queue = queue.Queue()
+
+        # Crear y comenzar los hilos
+        threads = []
         for name, instance in instances.items():
-            print(f'Getting solution of instance {name}')
-            solutions[name] = heuristic(instance)
-        del local_vars['heuristic']
+            thread = threading.Thread(target=self.run_heuristic, args=(heuristic, instance, result_queue, name))
+            thread.daemon = True  # El hilo se cierra cuando el hilo principal termine
+            thread.start()
+            threads.append(thread)
+
+        # Esperar que todos los hilos terminen y comprobar si superan el tiempo límite
+        for thread in threads:
+            thread.join(timeout=self.max_time)  # Esperamos que cada hilo termine en el tiempo especificado
+
+        # Comprobamos si algún hilo sigue en ejecución después de `timeout`
+        for thread in threads:
+            if thread.is_alive():  # Si el hilo sigue vivo, significa que no terminó dentro del tiempo
+                raise TimeoutError("The heuristic has exceeded the time limit, which is likely due to entering an infinite loop.")
+
+        # Recoger los resultados de la cola
+        while not result_queue.empty():
+            name, result = result_queue.get()
+            solutions[name] = result
+
+        del local_vars['heuristic']  # Limpiamos el nombre de la heurística del espacio de variables
         return solutions
+
+    def run_heuristic(self, heuristic, instance, result_queue, name):
+        try:
+            result = heuristic(instance)
+            result_queue.put((name, result))
+        except Exception as e:
+            result_queue.put((name, f"Error: {e}"))
+            raise
     
     def normalize(self, of):
         self.normalized_evaluation = copy.deepcopy(self.base_evaluation)

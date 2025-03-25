@@ -1,0 +1,746 @@
+[
+    {
+        "id": 1,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic1.py",
+        "valid": false,
+        "generation": 0,
+        "repair counter": 2,
+        "evaluation": "Infeasible"
+    },
+    {
+        "id": 2,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic2.py",
+        "valid": true,
+        "generation": 0,
+        "repair counter": 1,
+        "evaluation": {
+            "mk00.txt": {
+                "Makespan": 51,
+                "Separation": 15,
+                "Balance": 36
+            },
+            "mk01.txt": {
+                "Makespan": 126,
+                "Separation": 30,
+                "Balance": 79
+            },
+            "mk02.txt": {
+                "Makespan": 81,
+                "Separation": 38,
+                "Balance": 47
+            },
+            "mk03.txt": {
+                "Makespan": 791,
+                "Separation": 581,
+                "Balance": 243
+            },
+            "mk04.txt": {
+                "Makespan": 246,
+                "Separation": 483,
+                "Balance": 159
+            },
+            "mk05.txt": {
+                "Makespan": 482,
+                "Separation": 428,
+                "Balance": 263
+            },
+            "mk06.txt": {
+                "Makespan": 413,
+                "Separation": 604,
+                "Balance": 157
+            },
+            "mk07.txt": {
+                "Makespan": 439,
+                "Separation": 244,
+                "Balance": 252
+            },
+            "mk08.txt": {
+                "Makespan": 2228,
+                "Separation": 731,
+                "Balance": 595
+            },
+            "mk09.txt": {
+                "Makespan": 1767,
+                "Separation": 1186,
+                "Balance": 490
+            },
+            "mk10.txt": {
+                "Makespan": 1320,
+                "Separation": 507,
+                "Balance": 366
+            },
+            "mk11.txt": {
+                "Makespan": 2232,
+                "Separation": 1114,
+                "Balance": 891
+            },
+            "mk12.txt": {
+                "Makespan": 1695,
+                "Separation": 4431,
+                "Balance": 661
+            },
+            "mk13.txt": {
+                "Makespan": 1468,
+                "Separation": 1244,
+                "Balance": 670
+            },
+            "mk14.txt": {
+                "Makespan": 3178,
+                "Separation": 9669,
+                "Balance": 1041
+            },
+            "mk15.txt": {
+                "Makespan": 1773,
+                "Separation": 2674,
+                "Balance": 570
+            }
+        }
+    },
+    {
+        "id": 3,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic3.py",
+        "valid": true,
+        "generation": 0,
+        "repair counter": 0,
+        "evaluation": {
+            "mk00.txt": {
+                "Makespan": 55,
+                "Separation": 10,
+                "Balance": 42
+            },
+            "mk01.txt": {
+                "Makespan": 144,
+                "Separation": 61,
+                "Balance": 79
+            },
+            "mk02.txt": {
+                "Makespan": 86,
+                "Separation": 24,
+                "Balance": 51
+            },
+            "mk03.txt": {
+                "Makespan": 893,
+                "Separation": 680,
+                "Balance": 252
+            },
+            "mk04.txt": {
+                "Makespan": 242,
+                "Separation": 172,
+                "Balance": 144
+            },
+            "mk05.txt": {
+                "Makespan": 536,
+                "Separation": 556,
+                "Balance": 295
+            },
+            "mk06.txt": {
+                "Makespan": 408,
+                "Separation": 578,
+                "Balance": 147
+            },
+            "mk07.txt": {
+                "Makespan": 481,
+                "Separation": 215,
+                "Balance": 305
+            },
+            "mk08.txt": {
+                "Makespan": 2144,
+                "Separation": 1311,
+                "Balance": 581
+            },
+            "mk09.txt": {
+                "Makespan": 1829,
+                "Separation": 1125,
+                "Balance": 457
+            },
+            "mk10.txt": {
+                "Makespan": 1103,
+                "Separation": 833,
+                "Balance": 371
+            },
+            "mk11.txt": {
+                "Makespan": 1966,
+                "Separation": 1124,
+                "Balance": 861
+            },
+            "mk12.txt": {
+                "Makespan": 2162,
+                "Separation": 3093,
+                "Balance": 670
+            },
+            "mk13.txt": {
+                "Makespan": 1569,
+                "Separation": 1683,
+                "Balance": 665
+            },
+            "mk14.txt": {
+                "Makespan": 3240,
+                "Separation": 12690,
+                "Balance": 1086
+            },
+            "mk15.txt": {
+                "Makespan": 2384,
+                "Separation": 3728,
+                "Balance": 525
+            }
+        }
+    },
+    {
+        "id": 4,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic4.py",
+        "valid": true,
+        "generation": 0,
+        "repair counter": 0,
+        "evaluation": {
+            "mk00.txt": {
+                "Makespan": 47,
+                "Separation": 10,
+                "Balance": 37
+            },
+            "mk01.txt": {
+                "Makespan": 87,
+                "Separation": 50,
+                "Balance": 68
+            },
+            "mk02.txt": {
+                "Makespan": 79,
+                "Separation": 39,
+                "Balance": 36
+            },
+            "mk03.txt": {
+                "Makespan": 597,
+                "Separation": 284,
+                "Balance": 335
+            },
+            "mk04.txt": {
+                "Makespan": 226,
+                "Separation": 490,
+                "Balance": 167
+            },
+            "mk05.txt": {
+                "Makespan": 460,
+                "Separation": 92,
+                "Balance": 211
+            },
+            "mk06.txt": {
+                "Makespan": 220,
+                "Separation": 520,
+                "Balance": 77
+            },
+            "mk07.txt": {
+                "Makespan": 340,
+                "Separation": 26,
+                "Balance": 184
+            },
+            "mk08.txt": {
+                "Makespan": 2081,
+                "Separation": 543,
+                "Balance": 592
+            },
+            "mk09.txt": {
+                "Makespan": 1541,
+                "Separation": 3384,
+                "Balance": 384
+            },
+            "mk10.txt": {
+                "Makespan": 1084,
+                "Separation": 803,
+                "Balance": 318
+            },
+            "mk11.txt": {
+                "Makespan": 2042,
+                "Separation": 688,
+                "Balance": 782
+            },
+            "mk12.txt": {
+                "Makespan": 1669,
+                "Separation": 1522,
+                "Balance": 624
+            },
+            "mk13.txt": {
+                "Makespan": 1359,
+                "Separation": 1508,
+                "Balance": 585
+            },
+            "mk14.txt": {
+                "Makespan": 2983,
+                "Separation": 5268,
+                "Balance": 1093
+            },
+            "mk15.txt": {
+                "Makespan": 1661,
+                "Separation": 3540,
+                "Balance": 459
+            }
+        }
+    },
+    {
+        "id": 5,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic5.py",
+        "valid": false,
+        "generation": 0,
+        "repair counter": 2,
+        "evaluation": "Code Error"
+    },
+    {
+        "id": 6,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic6.py",
+        "valid": false,
+        "generation": 0,
+        "repair counter": 2,
+        "evaluation": "Infeasible"
+    },
+    {
+        "id": 7,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic7.py",
+        "valid": false,
+        "generation": 0,
+        "repair counter": 2,
+        "evaluation": "Infeasible"
+    },
+    {
+        "id": 8,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic8.py",
+        "valid": true,
+        "generation": 0,
+        "repair counter": 0,
+        "evaluation": {
+            "mk00.txt": {
+                "Makespan": 47,
+                "Separation": 10,
+                "Balance": 37
+            },
+            "mk01.txt": {
+                "Makespan": 87,
+                "Separation": 50,
+                "Balance": 68
+            },
+            "mk02.txt": {
+                "Makespan": 79,
+                "Separation": 39,
+                "Balance": 36
+            },
+            "mk03.txt": {
+                "Makespan": 597,
+                "Separation": 284,
+                "Balance": 335
+            },
+            "mk04.txt": {
+                "Makespan": 226,
+                "Separation": 490,
+                "Balance": 167
+            },
+            "mk05.txt": {
+                "Makespan": 460,
+                "Separation": 92,
+                "Balance": 211
+            },
+            "mk06.txt": {
+                "Makespan": 220,
+                "Separation": 520,
+                "Balance": 77
+            },
+            "mk07.txt": {
+                "Makespan": 340,
+                "Separation": 26,
+                "Balance": 184
+            },
+            "mk08.txt": {
+                "Makespan": 2081,
+                "Separation": 543,
+                "Balance": 592
+            },
+            "mk09.txt": {
+                "Makespan": 1541,
+                "Separation": 3384,
+                "Balance": 384
+            },
+            "mk10.txt": {
+                "Makespan": 1084,
+                "Separation": 803,
+                "Balance": 318
+            },
+            "mk11.txt": {
+                "Makespan": 2042,
+                "Separation": 688,
+                "Balance": 782
+            },
+            "mk12.txt": {
+                "Makespan": 1669,
+                "Separation": 1522,
+                "Balance": 624
+            },
+            "mk13.txt": {
+                "Makespan": 1359,
+                "Separation": 1508,
+                "Balance": 585
+            },
+            "mk14.txt": {
+                "Makespan": 2983,
+                "Separation": 5268,
+                "Balance": 1093
+            },
+            "mk15.txt": {
+                "Makespan": 1661,
+                "Separation": 3540,
+                "Balance": 459
+            }
+        }
+    },
+    {
+        "id": 9,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic9.py",
+        "valid": true,
+        "generation": 1,
+        "repair counter": 0,
+        "evaluation": {
+            "mk00.txt": {
+                "Makespan": 47,
+                "Separation": 10,
+                "Balance": 37
+            },
+            "mk01.txt": {
+                "Makespan": 87,
+                "Separation": 50,
+                "Balance": 68
+            },
+            "mk02.txt": {
+                "Makespan": 79,
+                "Separation": 39,
+                "Balance": 36
+            },
+            "mk03.txt": {
+                "Makespan": 597,
+                "Separation": 284,
+                "Balance": 335
+            },
+            "mk04.txt": {
+                "Makespan": 226,
+                "Separation": 490,
+                "Balance": 167
+            },
+            "mk05.txt": {
+                "Makespan": 460,
+                "Separation": 92,
+                "Balance": 211
+            },
+            "mk06.txt": {
+                "Makespan": 220,
+                "Separation": 520,
+                "Balance": 77
+            },
+            "mk07.txt": {
+                "Makespan": 340,
+                "Separation": 26,
+                "Balance": 184
+            },
+            "mk08.txt": {
+                "Makespan": 2081,
+                "Separation": 543,
+                "Balance": 592
+            },
+            "mk09.txt": {
+                "Makespan": 1541,
+                "Separation": 3384,
+                "Balance": 384
+            },
+            "mk10.txt": {
+                "Makespan": 1084,
+                "Separation": 803,
+                "Balance": 318
+            },
+            "mk11.txt": {
+                "Makespan": 2042,
+                "Separation": 688,
+                "Balance": 782
+            },
+            "mk12.txt": {
+                "Makespan": 1669,
+                "Separation": 1522,
+                "Balance": 624
+            },
+            "mk13.txt": {
+                "Makespan": 1359,
+                "Separation": 1508,
+                "Balance": 585
+            },
+            "mk14.txt": {
+                "Makespan": 2983,
+                "Separation": 5268,
+                "Balance": 1093
+            },
+            "mk15.txt": {
+                "Makespan": 1661,
+                "Separation": 3540,
+                "Balance": 459
+            }
+        }
+    },
+    {
+        "id": 10,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic10.py",
+        "valid": true,
+        "generation": 1,
+        "repair counter": 0,
+        "evaluation": {
+            "mk00.txt": {
+                "Makespan": 47,
+                "Separation": 10,
+                "Balance": 37
+            },
+            "mk01.txt": {
+                "Makespan": 87,
+                "Separation": 50,
+                "Balance": 68
+            },
+            "mk02.txt": {
+                "Makespan": 79,
+                "Separation": 39,
+                "Balance": 36
+            },
+            "mk03.txt": {
+                "Makespan": 597,
+                "Separation": 284,
+                "Balance": 335
+            },
+            "mk04.txt": {
+                "Makespan": 226,
+                "Separation": 490,
+                "Balance": 167
+            },
+            "mk05.txt": {
+                "Makespan": 460,
+                "Separation": 92,
+                "Balance": 211
+            },
+            "mk06.txt": {
+                "Makespan": 220,
+                "Separation": 520,
+                "Balance": 77
+            },
+            "mk07.txt": {
+                "Makespan": 340,
+                "Separation": 26,
+                "Balance": 184
+            },
+            "mk08.txt": {
+                "Makespan": 2081,
+                "Separation": 543,
+                "Balance": 592
+            },
+            "mk09.txt": {
+                "Makespan": 1541,
+                "Separation": 3384,
+                "Balance": 384
+            },
+            "mk10.txt": {
+                "Makespan": 1084,
+                "Separation": 803,
+                "Balance": 318
+            },
+            "mk11.txt": {
+                "Makespan": 2042,
+                "Separation": 688,
+                "Balance": 782
+            },
+            "mk12.txt": {
+                "Makespan": 1669,
+                "Separation": 1522,
+                "Balance": 624
+            },
+            "mk13.txt": {
+                "Makespan": 1359,
+                "Separation": 1508,
+                "Balance": 585
+            },
+            "mk14.txt": {
+                "Makespan": 2983,
+                "Separation": 5268,
+                "Balance": 1093
+            },
+            "mk15.txt": {
+                "Makespan": 1661,
+                "Separation": 3540,
+                "Balance": 459
+            }
+        }
+    },
+    {
+        "id": 11,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic11.py",
+        "valid": true,
+        "generation": 1,
+        "repair counter": 0,
+        "evaluation": {
+            "mk00.txt": {
+                "Makespan": 42,
+                "Separation": 0,
+                "Balance": 24
+            },
+            "mk01.txt": {
+                "Makespan": 116,
+                "Separation": 10,
+                "Balance": 62
+            },
+            "mk02.txt": {
+                "Makespan": 116,
+                "Separation": 67,
+                "Balance": 42
+            },
+            "mk03.txt": {
+                "Makespan": 857,
+                "Separation": 214,
+                "Balance": 274
+            },
+            "mk04.txt": {
+                "Makespan": 258,
+                "Separation": 148,
+                "Balance": 103
+            },
+            "mk05.txt": {
+                "Makespan": 510,
+                "Separation": 64,
+                "Balance": 221
+            },
+            "mk06.txt": {
+                "Makespan": 431,
+                "Separation": 53,
+                "Balance": 113
+            },
+            "mk07.txt": {
+                "Makespan": 440,
+                "Separation": 44,
+                "Balance": 235
+            },
+            "mk08.txt": {
+                "Makespan": 2273,
+                "Separation": 685,
+                "Balance": 616
+            },
+            "mk09.txt": {
+                "Makespan": 2015,
+                "Separation": 462,
+                "Balance": 445
+            },
+            "mk10.txt": {
+                "Makespan": 1417,
+                "Separation": 336,
+                "Balance": 323
+            },
+            "mk11.txt": {
+                "Makespan": 2087,
+                "Separation": 627,
+                "Balance": 768
+            },
+            "mk12.txt": {
+                "Makespan": 1942,
+                "Separation": 1104,
+                "Balance": 637
+            },
+            "mk13.txt": {
+                "Makespan": 1698,
+                "Separation": 772,
+                "Balance": 630
+            },
+            "mk14.txt": {
+                "Makespan": 2888,
+                "Separation": 3787,
+                "Balance": 886
+            },
+            "mk15.txt": {
+                "Makespan": 2355,
+                "Separation": 1497,
+                "Balance": 547
+            }
+        }
+    },
+    {
+        "id": 12,
+        "code file": "ejecuciones\\pra-3/heuristics/heuristic12.py",
+        "valid": true,
+        "generation": 1,
+        "repair counter": 0,
+        "evaluation": {
+            "mk00.txt": {
+                "Makespan": 47,
+                "Separation": 10,
+                "Balance": 37
+            },
+            "mk01.txt": {
+                "Makespan": 87,
+                "Separation": 50,
+                "Balance": 68
+            },
+            "mk02.txt": {
+                "Makespan": 79,
+                "Separation": 39,
+                "Balance": 36
+            },
+            "mk03.txt": {
+                "Makespan": 597,
+                "Separation": 284,
+                "Balance": 335
+            },
+            "mk04.txt": {
+                "Makespan": 226,
+                "Separation": 490,
+                "Balance": 167
+            },
+            "mk05.txt": {
+                "Makespan": 460,
+                "Separation": 92,
+                "Balance": 211
+            },
+            "mk06.txt": {
+                "Makespan": 220,
+                "Separation": 520,
+                "Balance": 77
+            },
+            "mk07.txt": {
+                "Makespan": 340,
+                "Separation": 26,
+                "Balance": 184
+            },
+            "mk08.txt": {
+                "Makespan": 2081,
+                "Separation": 543,
+                "Balance": 592
+            },
+            "mk09.txt": {
+                "Makespan": 1541,
+                "Separation": 3384,
+                "Balance": 384
+            },
+            "mk10.txt": {
+                "Makespan": 1084,
+                "Separation": 803,
+                "Balance": 318
+            },
+            "mk11.txt": {
+                "Makespan": 2042,
+                "Separation": 688,
+                "Balance": 782
+            },
+            "mk12.txt": {
+                "Makespan": 1669,
+                "Separation": 1522,
+                "Balance": 624
+            },
+            "mk13.txt": {
+                "Makespan": 1359,
+                "Separation": 1508,
+                "Balance": 585
+            },
+            "mk14.txt": {
+                "Makespan": 2983,
+                "Separation": 5268,
+                "Balance": 1093
+            },
+            "mk15.txt": {
+                "Makespan": 1661,
+                "Separation": 3540,
+                "Balance": 459
+            }
+        }
+    }
+]

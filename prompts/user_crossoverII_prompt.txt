@@ -5,9 +5,10 @@
 {parent2}
 ### Analyze & experience
 - {long_reflection}
-Your task is to write an improved function 
-named heuristic COMPLETELY DIFFERENT from 
-the two above base Analyze & experience.
+
+Your task is to create an improved function called heuristic 
+that applies a completely different approach compared to the two heuristics provided above. 
+The goal is to enhance the current solutions by utilizing Analyze & experience. 
 Output the code within a Python code block:
 ```python ... ´´´, has comment and docstring (<50
 words) to description key idea of heuristics design.

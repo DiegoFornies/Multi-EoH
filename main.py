@@ -4,7 +4,13 @@ from reader import Reader
 population_size = 20
 iterations = 25
 
-NSGA = NSGA_Evo_JSSP('jssp', population_size=population_size, iterations = iterations, execution_name='ExplotacionReflectionGemini', crossover_type='I')
-#NSGA = NSGA_Evo_JSSP('jssp', population_size=20, iterations = 25, execution_name='ExploracionReflectionGemini', crossover_type='II')
+try:
+    NSGA = NSGA_Evo_JSSP('jssp', population_size=population_size, iterations = iterations, crossover_type='II')
+    NSGA.start()
+except Exception as e:
+    NSGA = NSGA_Evo_JSSP('jssp', population_size=population_size, iterations = iterations, crossover_type='II')
+    NSGA.start()
+
+NSGA = NSGA_Evo_JSSP('jssp', population_size=population_size, iterations = iterations, crossover_type='I')
 
 NSGA.start()
