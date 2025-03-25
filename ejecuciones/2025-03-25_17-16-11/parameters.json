@@ -1,8 +1,0 @@
-{
-    "population size": 5,
-    "problem name": "jssp",
-    "max evolutions": 1,
-    "crossoverI": 5,
-    "crossoverII": 0,
-    "mutation": 0
-}
