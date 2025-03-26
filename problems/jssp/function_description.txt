@@ -9,16 +9,6 @@ The input of the function 'heuristic' is a dictionary with the following keys:
     - Each operation is a tuple containing:
         - A list of machines involved. (start from 0)
         - A list of corresponding processing times.
-Example Input:
-{
-    'n_jobs': 3,
-    'n_machines': 3,
-    'jobs': {
-        1: [([1, 2], [10, 15]), ([2], [20])], # Operation 1: machines [1, 2], processing times [10, 15]
-        2: [([2], [20])],
-        3: [([1, 2, 3], [5, 10, 12]), ([2], [10]), ([3], [12])]
-    }
-}
 
 The output is a dictionary where:
 - Each **key** is a **job number**.
@@ -28,8 +18,3 @@ The output is a dictionary where:
     - Start Time: Start time.
     - End Time: End time.
     - Processing Time: Processing time.
-Example:
-{
-    1: [{'Operation': 1, 'Assigned Machine': '1', 'Start Time': 0, 'End Time': 10, 'Processing Time': 10}, {...}],
-    2: [{'Operation': 1, 'Assigned Machine': '2', 'Start Time': 0, 'End Time': 5, 'Processing Time': 5}, {...}],
-}

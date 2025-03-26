@@ -73,7 +73,7 @@ class NSGA_Evo(ABC):
     #---------------------------
     
     def init_population(self):
-        for n in range(self.population_size * 2):
+        for n in range(self.population_size * 3):
             system_prompt, user_prompt = self.Reader.get_initialization_prompt()
             individual = self.create_individual(system_prompt, user_prompt)
             self.population.append(individual)

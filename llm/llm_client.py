@@ -3,7 +3,7 @@ import time
 
 class LLMClient:
     def __init__(self):
-        genai.configure(api_key='')
+        genai.configure(api_key='AIzaSyCaP4PomEELfhUVpWVKxr3-jPOSCD4dTkY')
         self.model = genai.GenerativeModel('gemini-2.0-flash')
         self.total_petitions = 0
         self.counter = 0
