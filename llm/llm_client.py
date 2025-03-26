@@ -3,7 +3,7 @@ import time
 
 class LLMClient:
     def __init__(self):
-        genai.configure(api_key='')
+        genai.configure(api_key='AIzaSyDwCd7UCMxYe7zQKlho91CHBRZLc8SHdQ0')
         self.model = genai.GenerativeModel('gemini-2.0-flash')
         self.total_petitions = 0
         self.counter = 0
@@ -19,6 +19,7 @@ class LLMClient:
                 time_to_wait = 60 - elapsed_time + 5
                 print(f"Esperando {time_to_wait:.2f} segundos para cumplir el límite de 15 peticiones por minuto.")
                 time.sleep(time_to_wait)
+            self.total_petitions += self.counter
             self.counter = 0
             self.time = time.time()
 
@@ -31,6 +32,5 @@ class LLMClient:
         output_tokens = self.model.count_tokens(response.text).total_tokens
         self.total_output_tokens += output_tokens
         self.counter += 1
-        self.total_petitions += 1
 
         return response.text

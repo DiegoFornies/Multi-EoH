@@ -15,7 +15,7 @@ import pandas as pd
 import json
 
 class NSGA_Evo(ABC):
-    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, crossover_type, reference_vectors = ''):
+    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reference_vectors = ''):
         self.individual_id = 0
 
         self.Reader = Reader(problem_name)
@@ -27,19 +27,21 @@ class NSGA_Evo(ABC):
 
         self.problem_name = problem_name
 
-        self.crossover_type = crossover_type
+        self.mutation_prob = 0.1
+        self.explorative_prob_init = 0.8
+        self.intense_prob_init = 0.2
+        self.explorative_prob_end = 0.2
+        self.intense_prob_end = 0.8
+        self.explorative_prob = self.explorative_prob_init
+        self.intense_prob = self.intense_prob_init
 
-        self.mutation_iterations = round(0.1*(self.population_size))
-        if self.crossover_type == 'II':
-            self.crossoverI_iterations = round(0.6 * (self.population_size))
-            self.crossoverII_iterations = self.population_size - self.crossoverI_iterations - self.mutation_iterations
-        elif self.crossover_type == 'I':
-            self.crossoverI_iterations = self.population_size - self.mutation_iterations
-            self.crossoverII_iterations = 0
-
+        self.a = 10
+        self.b = 0.4
+        
         self.instances = self.get_instances()
 
-        self.long_reflection = ''
+        self.long_reflectionI = ''
+        self.long_reflectionII = ''
 
 
         self.of = self.init_objective_functions_info(objective_functions)
@@ -64,6 +66,8 @@ class NSGA_Evo(ABC):
         self.incorrect_heuristics = 0
         self.repaired_heuristics = 0
 
+        self.ks = []
+
     def create_execution_folder(self):
 
         os.makedirs(self.folder_path)
@@ -78,9 +82,11 @@ class NSGA_Evo(ABC):
         parameters = {'population size': self.population_size,
                       'problem name': self.problem_name,
                       'max evolutions': self.max_evolutions,
-                      'crossoverI': self.crossoverI_iterations,
-                      'crossoverII': self.crossoverII_iterations,
-                      'mutation': self.mutation_iterations}
+                      'a': self.a,
+                      'b': self.b,
+                      'explorative initial probability': self.explorative_prob_init,
+                      'intense initial probability': self.intense_prob_init,
+                      'mutation': self.mutation_prob}
         
         with open(parameters_path, 'w') as archivo_json:
                 json.dump(parameters, archivo_json, indent=4)
@@ -107,6 +113,11 @@ class NSGA_Evo(ABC):
         self.total_heuristics += 1
         return Individual(code, self.Reader, self.LLMManager, self.folder_path, self.individual_id, self.iteration)
     
+    def update_crossover_probabilities(self):
+        factor = 1 / (1 + np.exp(self.a * ((self.iteration / self.max_evolutions) - self.b)))
+        self.intense_prob = self.intense_prob_init + (self.intense_prob_end - self.intense_prob_init) * (1 - factor)
+        self.explorative_prob = 1 - self.intense_prob
+
     def evaluate_population(self): #evalúa la población, la normaliza y la media.
         for individual in list(self.population):
             if not individual.base_evaluation:
@@ -123,12 +134,7 @@ class NSGA_Evo(ABC):
                     self.repaired_heuristics += 1
                 else:
                     self.correct_heuristics += 1
-        #self.update_minmax_score()
         self.normalize_and_mean_population()
-
-    def update_minmax_score(self):
-        for individual in self.population:
-            self.of = individual.update_minmax(self.of)
     
     def normalize_and_mean_population(self):
 
@@ -224,6 +230,7 @@ class NSGA_Evo(ABC):
     def get_k_means(self, population):
         evaluations = np.array([list(ind.evaluation.values()) for ind in population])
         k = self.select_best_k(evaluations, population)
+        self.ks.append(k)
         kmeans = KMeans(n_clusters=k, random_state=42)
         kmeans.fit(evaluations)
         clusters = {label:{'Individuals': [], 'Centroid': centroid} for label, centroid in enumerate(kmeans.cluster_centers_)} #guardamos centroide y individuo para cada cluster
@@ -261,11 +268,15 @@ class NSGA_Evo(ABC):
             system_prompt, user_prompt = self.Reader.get_cluster_reflection_prompt(info, self.of)
             ref = self.LLMManager.get_reflection(system_prompt, user_prompt)
             clusters_reflection.append({'Centroid': info['Centroid'], 'Reflection': ref})
-        system_prompt, user_prompt = self.Reader.get_long_reflection_prompt(self.long_reflection, clusters_reflection, self.of)
-        self.long_reflection = self.LLMManager.get_reflection(system_prompt, user_prompt)
+        system_promptI, user_promptI = self.Reader.get_long_reflectionI_prompt(self.long_reflectionI, clusters_reflection, self.of)
+        system_promptII, user_promptII = self.Reader.get_long_reflectionII_prompt(self.long_reflectionI, clusters_reflection, self.of)
+        self.long_reflectionI = self.LLMManager.get_reflection(system_promptI, user_promptI)
+        self.long_reflectionII = self.LLMManager.get_reflection(system_promptII, user_promptII)
 
-        with open(f'{self.folder_path}/long_reflection.txt', "a") as file:
-            file.write(f'Reflection {iteration}: {self.long_reflection}')
+        with open(f'{self.folder_path}/long_reflectionI.txt', "a") as file:
+            file.write(f'Reflection {iteration}: {self.long_reflectionI}')
+        with open(f'{self.folder_path}/long_reflectionII.txt', "a") as file:
+            file.write(f'Reflection {iteration}: {self.long_reflectionII}')
 
     def tournament_selection_nsgaII(self, parents):
         if len(parents) == 1:
@@ -283,21 +294,29 @@ class NSGA_Evo(ABC):
                 return parent2
     
     def crossover(self, parents): #sólo un crossover guiado por long_reflection entre dos padres
+
+        self.update_crossover_probabilities()
         sons = []
-        for i in range(self.crossoverI_iterations):
+        crossover_length = len(parents) - round(len(parents) * self.mutation_prob)
+        explorative_length = round(crossover_length * self.explorative_prob)
+        intense_length = crossover_length - explorative_length
+
+        for i in range(intense_length):
             parent1 = self.tournament_selection_nsgaII(parents)
             parents_without_parent1 = list(filter(lambda p: p != parent1, parents))
             parent2 = self.tournament_selection_nsgaII(parents_without_parent1) #seleccionamos población sin parent2
-            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverI_prompt(self.long_reflection, parent1, parent2)
+            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverI_prompt(self.long_reflectionI, parent1, parent2)
             son = self.create_individual(sCrossover_prompt, uCrossover_prompt)
             sons.append(son)
-        for i in range(self.crossoverII_iterations):
+
+        for i in range(explorative_length):
             parent1 = self.tournament_selection_nsgaII(parents)
             parents_without_parent1 = list(filter(lambda p: p != parent1, parents))
             parent2 = self.tournament_selection_nsgaII(parents_without_parent1) #seleccionamos población sin parent2
-            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverII_prompt(self.long_reflection, parent1, parent2)
+            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverII_prompt(self.long_reflectionII, parent1, parent2)
             son = self.create_individual(sCrossover_prompt, uCrossover_prompt)
             sons.append(son)
+
         return sons
     
     def elitist_mutation(self, parents): #sólo una especie de mutación cogiendo los mejores individuos del frente pareto
@@ -307,8 +326,9 @@ class NSGA_Evo(ABC):
                 best_score = individual.evaluation['Mean']
                 best_individual = individual
         sons = []
-        for i in range(self.mutation_iterations):
-            sMutation_prompt, uMutation_prompt = self.Reader.get_mutation_prompt(self.long_reflection, best_individual) #falta implementar prompt de mutation
+        mutation_length = round(len(parents) * self.mutation_prob)
+        for i in range(mutation_length):
+            sMutation_prompt, uMutation_prompt = self.Reader.get_mutation_prompt(self.long_reflectionI, best_individual)
             son = self.create_individual(sMutation_prompt, uMutation_prompt)
             sons.append(son)
         return sons
@@ -334,7 +354,6 @@ class NSGA_Evo(ABC):
             self.update_reflection(clusters, self.iteration)
             print(f'Reflected.')
 
-            self.iteration += 1
             crossover_sons = self.crossover(parents)
             print(f'Crossover done.')
             mutation_sons = self.elitist_mutation(parents)
@@ -344,6 +363,8 @@ class NSGA_Evo(ABC):
             parents.extend(mutation_sons)
 
             self.population = parents
+
+            self.iteration += 1
 
         self.evaluate_population()
         self.whole_population.extend(parents)
@@ -366,7 +387,8 @@ class NSGA_Evo(ABC):
                       'total petitions': self.LLMManager.LLMClient.total_petitions,
                       'total input tokens': self.LLMManager.LLMClient.total_input_tokens,
                       'total output tokens': self.LLMManager.LLMClient.total_output_tokens,
-                      'best heuristics': []}
+                      'best heuristics': [],
+                      'k': str(self.ks)}
         
         for individual in self.best_heuristics:
             finish_information['best heuristics'].append(individual.id)
@@ -385,8 +407,3 @@ class NSGA_Evo(ABC):
     @abstractmethod
     def decode_instance(self, individual): #return a dictionary with key: name of the objective function, value: fitness in the objective function
         pass
-
-    def print_population(self):
-        print(f'\nCantidad de individuos: {len(self.population)}')
-        for individual in self.population:
-            print(f'\nIndividuo {individual.id}: \n   Evaluación: {individual.evaluation}, Valid: {individual.valid}, Crowding Distance: {individual.crowding_distance}, Front: {individual.front}')

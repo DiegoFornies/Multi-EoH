@@ -4,6 +4,7 @@ import copy
 import json
 import threading
 import queue
+import concurrent.futures
 
 class Individual:
     def __init__(self, code, reader, llmmanager, folder_path, id, iteration):
@@ -97,29 +98,31 @@ class Individual:
         # Crear una cola para obtener los resultados de los hilos
         result_queue = queue.Queue()
 
-        # Crear y comenzar los hilos
-        threads = []
-        for name, instance in instances.items():
-            thread = threading.Thread(target=self.run_heuristic, args=(heuristic, instance, result_queue, name))
-            thread.daemon = True  # El hilo se cierra cuando el hilo principal termine
-            thread.start()
-            threads.append(thread)
+        # Usamos ThreadPoolExecutor para ejecutar los hilos
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = {}
 
-        # Esperar que todos los hilos terminen y comprobar si superan el tiempo límite
-        for thread in threads:
-            thread.join(timeout=self.max_time)  # Esperamos que cada hilo termine en el tiempo especificado
+            # Lanzar las tareas con un tiempo límite por tarea
+            for name, instance in instances.items():
+                future = executor.submit(self.run_heuristic, heuristic, instance, result_queue, name)
+                futures[future] = name  # Guardamos referencia de cada tarea
+            
+            # Procesar las tareas y manejar errores
+            for future in concurrent.futures.as_completed(futures):
+                name = futures[future]  # Obtener el nombre de la instancia
 
-        # Comprobamos si algún hilo sigue en ejecución después de `timeout`
-        for thread in threads:
-            if thread.is_alive():  # Si el hilo sigue vivo, significa que no terminó dentro del tiempo
-                raise TimeoutError("The heuristic has exceeded the time limit, which is likely due to entering an infinite loop.")
+                try:
+                    # Intentar obtener el resultado con timeout
+                    future.result(timeout=self.max_time)
+                except concurrent.futures.TimeoutError:
+                    future.cancel()
+                    raise TimeoutError
 
-        # Recoger los resultados de la cola
-        while not result_queue.empty():
-            name, result = result_queue.get()
-            solutions[name] = result
+            while not result_queue.empty():
+                name, result = result_queue.get()
+                solutions[name] = result
 
-        del local_vars['heuristic']  # Limpiamos el nombre de la heurística del espacio de variables
+        del local_vars['heuristic']
         return solutions
 
     def run_heuristic(self, heuristic, instance, result_queue, name):
@@ -130,20 +133,6 @@ class Individual:
             result_queue.put((name, f"Error: {e}"))
             raise
     
-    def normalize(self, of):
-        self.normalized_evaluation = copy.deepcopy(self.base_evaluation)
-        for of_name, of_info in of.items():
-            for inst_name, inst_ev in self.normalized_evaluation.items():
-                min = of_info['min_score'][inst_name]
-                max = of_info['max_score'][inst_name]
-                divisor = max - min
-                if divisor == 0:
-                    divisor = 1 #solo se cumple si todos tienen el mismo fitness
-                value = (max - inst_ev[of_name]) / divisor
-                if of_info['Objective'] == 'Maximize':
-                    value = 1 - value
-                self.normalized_evaluation[inst_name][of_name] = value
-
     def average(self, of, num_instances):
         if not self.evaluated:
             if self.valid:
@@ -158,17 +147,6 @@ class Individual:
                 
                 mean_evaluation['Mean'] = global_sum / len(of) #media global
                 self.evaluation = mean_evaluation
-
-    def update_minmax(self, of):
-        if not self.evaluated:
-            if self.valid:
-                for of_name, of_info in of.items():
-                    for inst_name, inst_ev in self.base_evaluation.items():
-                        if of_info['min_score'][inst_name] > inst_ev[of_name]:
-                            of_info['min_score'][inst_name] = inst_ev[of_name]
-                        if of_info['max_score'][inst_name] < inst_ev[of_name]:
-                            of_info['max_score'][inst_name] = inst_ev[of_name]
-        return of
     
     def get_dominance(self, of, population):
         if self.valid:

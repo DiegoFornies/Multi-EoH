@@ -33,8 +33,3 @@ Example:
     1: [{'Operation': 1, 'Assigned Machine': '1', 'Start Time': 0, 'End Time': 10, 'Processing Time': 10}, {...}],
     2: [{'Operation': 1, 'Assigned Machine': '2', 'Start Time': 0, 'End Time': 5, 'Processing Time': 5}, {...}],
 }
-
-You can also evaluate the performance of a solution using the objective_functions(solution) function.
-- Input: A solution in the same format.
-- Output: A dictionary where each key represents an objective function number, and the corresponding value is its computed result.
-    - Example of output: {'Makespan': 25, 'Separation': 5, 'Balance': 40.0} 

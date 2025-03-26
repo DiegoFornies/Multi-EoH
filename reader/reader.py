@@ -88,8 +88,23 @@ class Reader:
         user_prompt = user_prompt.replace('{cluster_performance}', performance).replace('{heuristics}', individuals_info)
         return system_prompt, user_prompt
     
-    def get_long_reflection_prompt(self, long_reflections, clusters, of):
-        system_prompt = self.read_file(f'{self.reflection_path}/system_long_reflection.txt')
+    def get_long_reflectionI_prompt(self, long_reflections, clusters, of):
+        system_prompt = self.read_file(f'{self.reflection_path}/system_long_explotative_reflection.txt')
+        user_prompt = self.read_file(f'{self.reflection_path}/user_long_reflection.txt')
+
+        clusters_reflections = ''
+        for cluster in clusters:
+            centroid = cluster['Centroid']
+            performance = ''
+            for num, (of_name, _) in enumerate(of.items()):
+                performance += f'{of_name}: {centroid[num]}     '
+            reflection = cluster['Reflection']
+            clusters_reflections += f'Cluster general performance: {performance}\nCluster reflection: {reflection}\n'
+        user_prompt = user_prompt.replace('{clusters_reflections}', clusters_reflections).replace('{long_reflections}', long_reflections)
+        return system_prompt, user_prompt
+    
+    def get_long_reflectionII_prompt(self, long_reflections, clusters, of):
+        system_prompt = self.read_file(f'{self.reflection_path}/system_long_explorative_reflection.txt')
         user_prompt = self.read_file(f'{self.reflection_path}/user_long_reflection.txt')
 
         clusters_reflections = ''

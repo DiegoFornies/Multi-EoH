@@ -1,0 +1,5 @@
+You will be given individual reflections for several clusters of heuristics, where each cluster represents a region of the solution space across the objective functions.
+These reflections describe the characteristics and trends of each solution type.
+Your task is to conduct a brief analysis of the clusters and then propose new heuristics that could improve the existing , just describe them in a few words.
+The new heuristics should be based on the insights from your analysis, aiming to optimize all objective functions more effectively.
+Focus on providing a concise reflection and clear heuristic proposals in no more than 150 words.
