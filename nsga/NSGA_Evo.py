@@ -3,7 +3,6 @@ from reader import Reader
 from llm import LLMManager
 from nsga.Individual import Individual
 import random
-from utils import calculate_crowding_distance, calculate_distances_to_reference_vectors
 import numpy as np
 from sklearn.cluster import KMeans
 import os
@@ -15,7 +14,12 @@ import pandas as pd
 import json
 
 class NSGA_Evo(ABC):
+<<<<<<< HEAD
     def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reflection, reference_vectors = ''):
+=======
+    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reference_vectors = ''):
+        
+>>>>>>> 1982cbc49940565d761245108c8cfb6617b87d10
         self.individual_id = 0
 
         self.Reader = Reader(problem_name)
@@ -23,7 +27,6 @@ class NSGA_Evo(ABC):
 
         self.population_size = population_size
         self.population = []
-        self.best_heuristics = []
 
         self.problem_name = problem_name
 
@@ -45,7 +48,7 @@ class NSGA_Evo(ABC):
         self.long_reflectionII = ''
 
 
-        self.of = self.init_objective_functions_info(objective_functions)
+        self.of = objective_functions
 
         self.reference_vectors = reference_vectors
 
@@ -56,6 +59,7 @@ class NSGA_Evo(ABC):
 
         if execution_name == '':
             execution_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
         self.folder_path = os.path.join("ejecuciones", execution_name)
         self.create_execution_folder()
 
@@ -69,55 +73,36 @@ class NSGA_Evo(ABC):
 
         self.ks = []
 
-    def create_execution_folder(self):
-
-        os.makedirs(self.folder_path)
-        os.makedirs(self.folder_path+'/heuristics')
-
-        heuristics_data_path = os.path.join(self.folder_path, "heuristics_data.json")
-        parameters_path = os.path.join(self.folder_path, "parameters.json")
-
-        with open(heuristics_data_path, 'w') as archivo_json:
-                json.dump([], archivo_json, indent=4)
-
-        parameters = {'population size': self.population_size,
-                      'problem name': self.problem_name,
-                      'max evolutions': self.max_evolutions,
-                      'a': self.a,
-                      'b': self.b,
-                      'explorative initial probability': self.explorative_prob_init,
-                      'intense initial probability': self.intense_prob_init,
-                      'mutation': self.mutation_prob}
-        
-        with open(parameters_path, 'w') as archivo_json:
-                json.dump(parameters, archivo_json, indent=4)
-            
-    def init_objective_functions_info(self, objective_functions):
-        for _, of_info in objective_functions.items():
-            of_info['max_score'] = {}
-            of_info['min_score'] = {}
-            for name, _ in self.instances.items():
-                of_info['min_score'][name] = float('inf')
-                of_info['max_score'][name] = float('-inf')
-
-        return objective_functions
+    #---------------------------
+    #------INITIALIZATIONS------
+    #---------------------------
     
     def init_population(self):
-        for n in range(self.population_size * 2):
+        for n in range(self.population_size * 3):
             system_prompt, user_prompt = self.Reader.get_initialization_prompt()
             individual = self.create_individual(system_prompt, user_prompt)
             self.population.append(individual)
+
+    def get_instances(self):
+        instances = self.Reader.get_instances()
+        decoded_ins = {}
+        for name, instance in instances.items():
+            decoded_ins[name] = self.decode_instance(instance)
+        return decoded_ins
+    
+    #-------------------------------
+    #------INDIVIDUAL CREATION------
+    #-------------------------------
 
     def create_individual(self, system_prompt, user_prompt):
         code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
         self.individual_id += 1
         self.total_heuristics += 1
         return Individual(code, self.Reader, self.LLMManager, self.folder_path, self.individual_id, self.iteration)
-    
-    def update_crossover_probabilities(self):
-        factor = 1 / (1 + np.exp(self.a * ((self.iteration / self.max_evolutions) - self.b)))
-        self.intense_prob = self.intense_prob_init + (self.intense_prob_end - self.intense_prob_init) * (1 - factor)
-        self.explorative_prob = 1 - self.intense_prob
+
+    #---------------------------
+    #--------EVALUATIONS--------
+    #---------------------------
 
     def evaluate_population(self): #evalúa la población, la normaliza y la media.
         for individual in list(self.population):
@@ -165,26 +150,27 @@ class NSGA_Evo(ABC):
         for individual in self.population:
             individual.average(self.of, num_instances)
             individual.evaluated = True
-    
-    def select_parents(self): #selecciona los padres y los pone en la población, eliminando los demás.
-        if len(self.of) <= 3:
-            parents, rest = self.select_parents_II()
-        else:
-            parents = self.select_parents_III()
-        return parents, rest
 
-    def select_parents_II(self): #utilizando NSGA II
+    #-------------------------------
+    #-------PARENTS SELECTION-------
+    #-------------------------------
+
+        #------------------------------------
+        #-------NSGA II IMPLEMENTATION-------
+        #------------------------------------
+
+    def select_parents_II(self):
         global_front = []
         front_num = 0
         num_parents = 0
         current_population = self.population
         while (not num_parents == self.population_size) and len(current_population) > 0:
             front, current_population = self.get_pareto_front(current_population) #el resto de la población se pone en current_population para siguiente frontera
-            calculate_crowding_distance(front)
+            self.calculate_crowding_distance(front)
             if num_parents + len(front) <= self.population_size:
                 num_parents += len(front)
             else:
-                calculate_crowding_distance(front)
+                self.calculate_crowding_distance(front)
                 front = sorted(front, key=lambda x: x.crowding_distance, reverse=True)
                 remaining = self.population_size - num_parents
                 front = front[:remaining]
@@ -195,27 +181,6 @@ class NSGA_Evo(ABC):
             global_front.extend(front)
             front_num += 1
         return global_front, current_population
-
-    def select_parents_III(self): #utilizando NSGA III
-        k = self.population_size // len(self.reference_vectors)
-        rest = self.population_size % len(self.reference_vectors) #iremos añadiendo el resto por orden de vector referencia
-        groups = self.get_groups_reference_vectors(self.reference_vectors, k, rest)
-        front = []
-        for key, value in groups.items():
-            front.extend(value)
-        return front
-    
-    def get_groups_reference_vectors(self, vectors, k, rest = 0): #k es los k mejores de cada uno, y rest por si sobran
-        calculate_distances_to_reference_vectors(self.population, vectors)
-        groups = {}
-        for reference_vector in vectors:
-            sorted_population = sorted(self.population, key=lambda ind: ind.vector_distance[reference_vector], reverse=True)
-            if rest > 0:
-                groups[reference_vector] = sorted_population[:k + 1]
-                rest -= 1
-            else:
-                groups[reference_vector] = sorted_population[:k]
-        return groups
     
     def get_pareto_front(self, current_population):
         pareto_front = []
@@ -228,6 +193,69 @@ class NSGA_Evo(ABC):
                 rest.append(individual)
         return pareto_front, rest
     
+    def calculate_crowding_distance(self, front):
+        num_ind = len(front)
+
+        for ind in front:
+            ind.crowding_distance = 0.0  
+
+        for obj in front[0].evaluation.keys():
+            front.sort(key=lambda ind: ind.evaluation[obj])
+
+            front[0].crowding_distance = float("inf")
+            front[-1].crowding_distance = float("inf")
+
+            f_min = front[0].evaluation[obj]
+            f_max = front[-1].evaluation[obj]
+            
+            if f_max == f_min:
+                continue
+
+            for i in range(1, num_ind - 1):
+                front[i].crowding_distance += (front[i + 1].evaluation[obj] - front[i - 1].evaluation[obj]) / (f_max - f_min)
+
+        #------------------------------------
+        #-------NSGA III IMPLEMENTATION------ (NOT PROVED)
+        #------------------------------------
+
+    # def select_parents_III(self): #utilizando NSGA III
+    #     k = self.population_size // len(self.reference_vectors)
+    #     rest = self.population_size % len(self.reference_vectors) #iremos añadiendo el resto por orden de vector referencia
+    #     groups = self.get_groups_reference_vectors(self.reference_vectors, k, rest)
+    #     front = []
+    #     for key, value in groups.items():
+    #         front.extend(value)
+    #     return front
+    
+    # def get_groups_reference_vectors(self, vectors, k, rest = 0): #k es los k mejores de cada uno, y rest por si sobran
+    #     calculate_distances_to_reference_vectors(self.population, vectors)
+    #     groups = {}
+    #     for reference_vector in vectors:
+    #         sorted_population = sorted(self.population, key=lambda ind: ind.vector_distance[reference_vector], reverse=True)
+    #         if rest > 0:
+    #             groups[reference_vector] = sorted_population[:k + 1]
+    #             rest -= 1
+    #         else:
+    #             groups[reference_vector] = sorted_population[:k]
+    #     return groups
+    
+    #------------------------
+    #-------REFLECTION-------
+    #------------------------
+
+    def update_reflection(self, clusters):
+        clusters_reflection = []
+        for cluster, info in clusters.items():
+            system_prompt, user_prompt = self.Reader.get_cluster_reflection_prompt(info, self.of)
+            ref = self.LLMManager.get_reflection(system_prompt, user_prompt)
+            clusters_reflection.append({'Centroid': info['Centroid'], 'Reflection': ref})
+        system_promptI, user_promptI = self.Reader.get_long_reflectionI_prompt(self.long_reflectionI, clusters_reflection, self.of)
+        system_promptII, user_promptII = self.Reader.get_long_reflectionII_prompt(self.long_reflectionI, clusters_reflection, self.of)
+        self.long_reflectionI = self.LLMManager.get_reflection(system_promptI, user_promptI)
+        self.long_reflectionII = self.LLMManager.get_reflection(system_promptII, user_promptII)
+
+        self.save_reflections()
+
     def get_k_means(self, population):
         evaluations = np.array([list(ind.evaluation.values()) for ind in population])
         k = self.select_best_k(evaluations, population)
@@ -256,44 +284,10 @@ class NSGA_Evo(ABC):
         print(f'K selected: ', best_k)
         return best_k
 
-    def get_instances(self):
-        instances = self.Reader.get_instances()
-        decoded_ins = {}
-        for name, instance in instances.items():
-            decoded_ins[name] = self.decode_instance(instance)
-        return decoded_ins
-    
-    def update_reflection(self, clusters, iteration):
-        clusters_reflection = []
-        for cluster, info in clusters.items():
-            system_prompt, user_prompt = self.Reader.get_cluster_reflection_prompt(info, self.of)
-            ref = self.LLMManager.get_reflection(system_prompt, user_prompt)
-            clusters_reflection.append({'Centroid': info['Centroid'], 'Reflection': ref})
-        system_promptI, user_promptI = self.Reader.get_long_reflectionI_prompt(self.long_reflectionI, clusters_reflection, self.of)
-        system_promptII, user_promptII = self.Reader.get_long_reflectionII_prompt(self.long_reflectionI, clusters_reflection, self.of)
-        self.long_reflectionI = self.LLMManager.get_reflection(system_promptI, user_promptI)
-        self.long_reflectionII = self.LLMManager.get_reflection(system_promptII, user_promptII)
+    #--------------------------------
+    #-----CROSSOVER AND MUTATION-----
+    #--------------------------------
 
-        with open(f'{self.folder_path}/long_reflectionI.txt', "a") as file:
-            file.write(f'Reflection {iteration}: {self.long_reflectionI}')
-        with open(f'{self.folder_path}/long_reflectionII.txt', "a") as file:
-            file.write(f'Reflection {iteration}: {self.long_reflectionII}')
-
-    def tournament_selection_nsgaII(self, parents):
-        if len(parents) == 1:
-            return random.sample(parents, 1)
-        parent1, parent2 = random.sample(parents, 2)
-
-        if parent1.front < parent2.front:
-            return parent1
-        elif parent1.front > parent2.front:
-            return parent2
-        else:  
-            if parent1.crowding_distance > parent2.crowding_distance:
-                return parent1
-            else:
-                return parent2
-    
     def crossover(self, parents): #sólo un crossover guiado por long_reflection entre dos padres
 
         self.update_crossover_probabilities()
@@ -334,29 +328,56 @@ class NSGA_Evo(ABC):
             sons.append(son)
         return sons
     
-    def select_best_individuals(self, population):
-        best_heuristics, _ = self.get_pareto_front(population)
-        return best_heuristics
+    def tournament_selection_nsgaII(self, parents):
+        if len(parents) == 1:
+            return random.sample(parents, 1)
+        parent1, parent2 = random.sample(parents, 2)
+
+        if parent1.front < parent2.front:
+            return parent1
+        elif parent1.front > parent2.front:
+            return parent2
+        else:  
+            if parent1.crowding_distance > parent2.crowding_distance:
+                return parent1
+            else:
+                return parent2
+            
+    def update_crossover_probabilities(self):
+        factor = 1 / (1 + np.exp(self.a * ((self.iteration / self.max_evolutions) - self.b)))
+        self.intense_prob = self.intense_prob_init + (self.intense_prob_end - self.intense_prob_init) * (1 - factor)
+        self.explorative_prob = 1 - self.intense_prob
+
+    #--------------------------
+    #----EVOLUTION FUNCTION----
+    #--------------------------
 
     def start(self):
+
         start_time = time.time()
         self.init_population()
+
         while self.iteration < self.max_evolutions:
+
             print(f'Starting evolution {self.iteration}...')
             self.evaluate_population()
             print(f'Evaluated.')
+
             if len(self.population) == 0:
                 print('No hay ningún heurístico válido.')
                 return
-            parents, rest = self.select_parents()
+            
+            parents, rest = self.select_parents_II()
             print(f'Selected.')
             self.whole_population.extend(rest)
+
             clusters = self.get_k_means(parents)
-            self.update_reflection(clusters, self.iteration)
+            self.update_reflection(clusters)
             print(f'Reflected.')
 
             crossover_sons = self.crossover(parents)
             print(f'Crossover done.')
+
             mutation_sons = self.elitist_mutation(parents)
             print(f'Mutation done.')
 
@@ -371,9 +392,35 @@ class NSGA_Evo(ABC):
         self.whole_population.extend(parents)
         
         end_time = time.time()
-        self.best_heuristics = self.select_best_individuals(self.whole_population)
 
         self.save_final_information(end_time - start_time)
+    
+    #---------------------------
+    #-----EXECUTION FOLDER -----
+    #---------------------------
+
+    def create_execution_folder(self):
+
+        os.makedirs(self.folder_path)
+        os.makedirs(self.folder_path+'/heuristics')
+
+        heuristics_data_path = os.path.join(self.folder_path, "heuristics_data.json")
+        parameters_path = os.path.join(self.folder_path, "parameters.json")
+
+        with open(heuristics_data_path, 'w') as archivo_json:
+                json.dump([], archivo_json, indent=4)
+
+        parameters = {'population size': self.population_size,
+                      'problem name': self.problem_name,
+                      'max evolutions': self.max_evolutions,
+                      'a': self.a,
+                      'b': self.b,
+                      'explorative initial probability': self.explorative_prob_init,
+                      'intense initial probability': self.intense_prob_init,
+                      'mutation': self.mutation_prob}
+        
+        with open(parameters_path, 'w') as archivo_json:
+                json.dump(parameters, archivo_json, indent=4)
 
     def save_final_information(self, time):
 
@@ -388,17 +435,24 @@ class NSGA_Evo(ABC):
                       'total petitions': self.LLMManager.LLMClient.total_petitions,
                       'total input tokens': self.LLMManager.LLMClient.total_input_tokens,
                       'total output tokens': self.LLMManager.LLMClient.total_output_tokens,
-                      'best heuristics': [],
                       'k': str(self.ks)}
-        
-        for individual in self.best_heuristics:
-            finish_information['best heuristics'].append(individual.id)
         
         with open(finish_path, 'w') as archivo_json:
                 json.dump(finish_information, archivo_json, indent=4)
+    
+    def save_reflections(self):
+        
+        with open(f'{self.folder_path}/long_reflectionI.txt', "a") as file:
+            file.write(f'Reflection {self.iteration}: {self.long_reflectionI}')
+        with open(f'{self.folder_path}/long_reflectionII.txt', "a") as file:
+            file.write(f'Reflection {self.iteration}: {self.long_reflectionII}')
+
+    #--------------------------
+    #-----ABSTRACT METHODS-----
+    #--------------------------
 
     @abstractmethod
-    def feasibility(self, instance, solution):
+    def feasibility(self, instance, solution): #returns True if it is feasible, infeasibility information if it is not.
         pass
 
     @abstractmethod

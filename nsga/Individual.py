@@ -1,13 +1,13 @@
-import random
 import traceback
-import copy
 import json
 import threading
-import queue
-import concurrent.futures
+import ctypes
+import numpy as np
+import math
 
 class Individual:
     def __init__(self, code, reader, llmmanager, folder_path, id, iteration):
+
         self.id = id #id único para cada individuo
 
         self.code = code  #Código del individuo (su heurística)
@@ -90,55 +90,49 @@ class Individual:
         return ''
     
     def get_solutions(self, instances):
-        local_vars = {}
-        exec(self.code, globals(), local_vars)  # Ejecutamos el código
-        heuristic = local_vars['heuristic']  # Extraemos la función heuristic
         solutions = {}
+        for inst_name, inst_value in instances.items():
+            resultado = [None]
+            excepcion = [None]
 
-        # Crear una cola para obtener los resultados de los hilos
-        result_queue = queue.Queue()
+            local_vars = {}
+            exec(self.code, globals(), local_vars)
+            heuristic = local_vars['heuristic']
 
-        # Usamos ThreadPoolExecutor para ejecutar los hilos
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = {}
-
-            # Lanzar las tareas con un tiempo límite por tarea
-            for name, instance in instances.items():
-                future = executor.submit(self.run_heuristic, heuristic, instance, result_queue, name)
-                futures[future] = name  # Guardamos referencia de cada tarea
-            
-            # Procesar las tareas y manejar errores
-            for future in concurrent.futures.as_completed(futures):
-                name = futures[future]  # Obtener el nombre de la instancia
-
+            def run_heuristic():
                 try:
-                    # Intentar obtener el resultado con timeout
-                    future.result(timeout=self.max_time)
-                except concurrent.futures.TimeoutError:
-                    future.cancel()
+                    resultado[0] = heuristic(inst_value)
+                except Exception as e:
+                    excepcion[0] = e
+
+            hilo = threading.Thread(target=run_heuristic)
+            hilo.start()
+            hilo.join(self.max_time)
+
+            if hilo.is_alive():
+                ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                    ctypes.c_long(hilo.ident), ctypes.py_object(SystemExit)
+                )
+                hilo.join(0.1)
+
+                if hilo.is_alive():
                     raise TimeoutError
 
-            while not result_queue.empty():
-                name, result = result_queue.get()
-                solutions[name] = result
-
+            if excepcion[0]:
+                raise excepcion[0]
+            
+            solutions[inst_name] = resultado[0]
+            
         del local_vars['heuristic']
-        return solutions
 
-    def run_heuristic(self, heuristic, instance, result_queue, name):
-        try:
-            result = heuristic(instance)
-            result_queue.put((name, result))
-        except Exception as e:
-            result_queue.put((name, f"Error: {e}"))
-            raise
+        return solutions
     
     def average(self, of, num_instances):
         if not self.evaluated:
             if self.valid:
                 global_sum = 0
                 mean_evaluation = {}
-                for of_name, of_info in of.items():
+                for of_name, _ in of.items():
                     sum = 0
                     for inst_name, inst_ev in self.normalized_evaluation.items():
                         sum += inst_ev[of_name]
