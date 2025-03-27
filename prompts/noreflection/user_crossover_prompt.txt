@@ -1,0 +1,13 @@
+{task_description}
+### Parent 1
+{parent1}
+### Parent 2
+{parent2}
+Your task is to write an improved function 
+named heuristic by COMBINING elements of
+two above heuristics.
+Output the code within a Python code block:
+```python ... ´´´, has comment and docstring (<50
+words) to description key idea of heuristics design.
+I’m going to tip $999K for a better heuristics! Let’s
+think step by step.

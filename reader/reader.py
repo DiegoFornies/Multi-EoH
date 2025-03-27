@@ -131,7 +131,7 @@ class Reader:
     def get_crossoverI_prompt(self, long_reflection, parent1, parent2):
         role_init = self.get_role()
         system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt').replace('{role_init}', role_init)
-        user_prompt = self.read_file(f'{self.prompt_path}/user_crossover_prompt.txt')
+        user_prompt = self.read_file(f'{self.prompt_path}/reflection/user_crossover_reflection_prompt.txt')
         task_description = self.get_task_description()
 
         user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent1}', parent1.code).replace('{parent2}', parent2.code).replace('{long_reflection}', long_reflection)
@@ -140,7 +140,7 @@ class Reader:
     def get_crossoverII_prompt(self, long_reflection, parent1, parent2):
         role_init = self.get_role()
         system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt').replace('{role_init}', role_init)
-        user_prompt = self.read_file(f'{self.prompt_path}/user_crossoverII_prompt.txt')
+        user_prompt = self.read_file(f'{self.prompt_path}/reflection/user_crossoverII_reflection_prompt.txt')
         task_description = self.get_task_description()
 
         user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent1}', parent1.code).replace('{parent2}', parent2.code).replace('{long_reflection}', long_reflection)
@@ -149,7 +149,7 @@ class Reader:
     def get_mutation_prompt(self, long_reflection, parent):
         role_init = self.get_role()
         system_prompt = self.read_file(f'{self.prompt_path}/system_generator_prompt.txt').replace('{role_init}', role_init)
-        user_prompt = self.read_file(f'{self.prompt_path}/user_mutation_prompt.txt')
+        user_prompt = self.read_file(f'{self.prompt_path}/reflection/user_mutation_reflection_prompt.txt')
         task_description = self.get_task_description()
 
         user_prompt = user_prompt.replace('{task_description}', task_description).replace('{parent}', parent.code).replace('{long_reflection}', long_reflection)

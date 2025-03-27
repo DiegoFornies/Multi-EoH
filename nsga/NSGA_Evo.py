@@ -15,7 +15,7 @@ import pandas as pd
 import json
 
 class NSGA_Evo(ABC):
-    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reference_vectors = ''):
+    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reflection, reference_vectors = ''):
         self.individual_id = 0
 
         self.Reader = Reader(problem_name)
@@ -40,6 +40,7 @@ class NSGA_Evo(ABC):
         
         self.instances = self.get_instances()
 
+        self.reflection = reflection
         self.long_reflectionI = ''
         self.long_reflectionII = ''
 
