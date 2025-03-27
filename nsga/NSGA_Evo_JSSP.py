@@ -4,11 +4,11 @@ from nsga import NSGA_Evo
 
 class NSGA_Evo_JSSP(NSGA_Evo):
     
-    def __init__(self, problem_name, population_size, iterations, execution_name = '', reference_vectors = ''):
+    def __init__(self, problem_name, initial_population, population_size, iterations, reflection, execution_name = '', reference_vectors = ''):
         objective_functions = {'Makespan': {'Objective': 'Minimize'}, 
                                'Separation': {'Objective': 'Minimize'}, #escribir el nombre que hay en objective_functions.py para cada una con su objetivo (minimizar o maximizar)
                                'Balance': {'Objective': 'Minimize'}}
-        super().__init__(problem_name, population_size, objective_functions, iterations, execution_name, reference_vectors)
+        super().__init__(problem_name, initial_population, population_size, objective_functions, iterations, reflection, execution_name, reference_vectors)
 
     def feasibility(self, instance, solution):
         def operation_feasibility(): #operaciones empiezan de 0

@@ -14,17 +14,13 @@ import pandas as pd
 import json
 
 class NSGA_Evo(ABC):
-<<<<<<< HEAD
-    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reflection, reference_vectors = ''):
-=======
-    def __init__(self, problem_name, population_size, objective_functions, iterations, execution_name, reference_vectors = ''):
-        
->>>>>>> 1982cbc49940565d761245108c8cfb6617b87d10
+    def __init__(self, problem_name, initial_population, population_size, objective_functions, iterations, reflection, execution_name, reference_vectors = ''):
         self.individual_id = 0
 
         self.Reader = Reader(problem_name)
         self.LLMManager = LLMManager()
 
+        self.initial_population = initial_population
         self.population_size = population_size
         self.population = []
 
@@ -78,7 +74,7 @@ class NSGA_Evo(ABC):
     #---------------------------
     
     def init_population(self):
-        for n in range(self.population_size * 3):
+        for n in range(self.initial_population):
             system_prompt, user_prompt = self.Reader.get_initialization_prompt()
             individual = self.create_individual(system_prompt, user_prompt)
             self.population.append(individual)
@@ -300,7 +296,10 @@ class NSGA_Evo(ABC):
             parent1 = self.tournament_selection_nsgaII(parents)
             parents_without_parent1 = list(filter(lambda p: p != parent1, parents))
             parent2 = self.tournament_selection_nsgaII(parents_without_parent1) #seleccionamos población sin parent2
-            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverI_prompt(self.long_reflectionI, parent1, parent2)
+            if self.reflection:
+                sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverI_reflection_prompt(self.long_reflectionI, parent1, parent2)
+            else:
+                sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverI_noreflection_prompt(parent1, parent2)
             son = self.create_individual(sCrossover_prompt, uCrossover_prompt)
             sons.append(son)
 
@@ -308,7 +307,10 @@ class NSGA_Evo(ABC):
             parent1 = self.tournament_selection_nsgaII(parents)
             parents_without_parent1 = list(filter(lambda p: p != parent1, parents))
             parent2 = self.tournament_selection_nsgaII(parents_without_parent1) #seleccionamos población sin parent2
-            sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverII_prompt(self.long_reflectionII, parent1, parent2)
+            if self.reflection:
+                sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverII_reflection_prompt(self.long_reflectionII, parent1, parent2)
+            else:
+                sCrossover_prompt, uCrossover_prompt = self.Reader.get_crossoverII_noreflection_prompt(parent1, parent2)
             son = self.create_individual(sCrossover_prompt, uCrossover_prompt)
             sons.append(son)
 
@@ -323,7 +325,10 @@ class NSGA_Evo(ABC):
         sons = []
         mutation_length = round(len(parents) * self.mutation_prob)
         for i in range(mutation_length):
-            sMutation_prompt, uMutation_prompt = self.Reader.get_mutation_prompt(self.long_reflectionI, best_individual)
+            if self.reflection:
+                sMutation_prompt, uMutation_prompt = self.Reader.get_mutation_reflection_prompt(self.long_reflectionI, best_individual)
+            else:
+                sMutation_prompt, uMutation_prompt = self.Reader.get_mutation_noreflection_prompt(best_individual)
             son = self.create_individual(sMutation_prompt, uMutation_prompt)
             sons.append(son)
         return sons
@@ -371,9 +376,10 @@ class NSGA_Evo(ABC):
             print(f'Selected.')
             self.whole_population.extend(rest)
 
-            clusters = self.get_k_means(parents)
-            self.update_reflection(clusters)
-            print(f'Reflected.')
+            if self.reflection:
+                clusters = self.get_k_means(parents)
+                self.update_reflection(clusters)
+                print(f'Reflected.')
 
             crossover_sons = self.crossover(parents)
             print(f'Crossover done.')
@@ -417,7 +423,8 @@ class NSGA_Evo(ABC):
                       'b': self.b,
                       'explorative initial probability': self.explorative_prob_init,
                       'intense initial probability': self.intense_prob_init,
-                      'mutation': self.mutation_prob}
+                      'mutation': self.mutation_prob,
+                      'reflection': self.reflection}
         
         with open(parameters_path, 'w') as archivo_json:
                 json.dump(parameters, archivo_json, indent=4)

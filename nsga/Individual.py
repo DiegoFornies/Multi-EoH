@@ -4,13 +4,17 @@ import threading
 import ctypes
 import numpy as np
 import math
+import re
 
 class Individual:
     def __init__(self, code, reader, llmmanager, folder_path, id, iteration):
 
         self.id = id #id único para cada individuo
 
+        self.max_time = 100
+
         self.code = code  #Código del individuo (su heurística)
+        self.timeout_code = self.get_timeout_code()
 
         self.base_evaluation = None
         self.normalized_evaluation = None  #Evaluación del individuo completa
@@ -31,8 +35,6 @@ class Individual:
         self.LLMManager = llmmanager
 
         self.folder_path = folder_path
-
-        self.max_time = 120
 
         self.code_file = f'{self.folder_path}/heuristics/heuristic{self.id}.py'
         with open(self.code_file, 'w') as file:
@@ -61,9 +63,9 @@ class Individual:
                             break
                 except TimeoutError as t:
                     if self.repair_counter < self.max_repair:
-                        self.repair(str(t))
+                        self.repair('The heuristic takes too long in executing. Please, check for infinite loops and solve it.')
                     self.repair_counter += 1
-                    evaluation = 'Time Out Error'
+                    evaluation = 'Code Error'
                     self.valid = False
                 except Exception as e:
                     if self.repair_counter < self.max_repair:
@@ -84,7 +86,7 @@ class Individual:
                 json.dump(datos, archivo_json, indent=4)
 
     def repair(self, message):
-        print(message)
+        print(f'Error message: {message}')
         system_prompt, user_prompt = self.Reader.get_repair_prompt(self.code, message)
         self.code = self.LLMManager.get_heuristic(system_prompt, user_prompt)
         return ''
@@ -92,40 +94,44 @@ class Individual:
     def get_solutions(self, instances):
         solutions = {}
         for inst_name, inst_value in instances.items():
-            resultado = [None]
-            excepcion = [None]
 
             local_vars = {}
-            exec(self.code, globals(), local_vars)
+            exec(self.timeout_code, globals(), local_vars)
             heuristic = local_vars['heuristic']
-
-            def run_heuristic():
-                try:
-                    resultado[0] = heuristic(inst_value)
-                except Exception as e:
-                    excepcion[0] = e
-
-            hilo = threading.Thread(target=run_heuristic)
-            hilo.start()
-            hilo.join(self.max_time)
-
-            if hilo.is_alive():
-                ctypes.pythonapi.PyThreadState_SetAsyncExc(
-                    ctypes.c_long(hilo.ident), ctypes.py_object(SystemExit)
-                )
-                hilo.join(0.1)
-
-                if hilo.is_alive():
-                    raise TimeoutError
-
-            if excepcion[0]:
-                raise excepcion[0]
-            
-            solutions[inst_name] = resultado[0]
+            resultado = heuristic(inst_value)
+            solutions[inst_name] = resultado
             
         del local_vars['heuristic']
 
         return solutions
+    
+    def get_timeout_code(self):
+        while_pattern = r'^\s*(while|for)\s+.*\s*:$'
+        def_pattern = r'^\s*def\s+heuristic\s*\(.*\)\s*:'
+
+        code_splitted = self.code.split('\n')
+
+        new_code = []
+
+        for i, content in enumerate(code_splitted):
+            new_code.append(content)
+            if re.match(def_pattern, content):
+                if i < len(code_splitted) - 1:
+                    next_line = code_splitted[i + 1]
+                    indentation_count = len(next_line) - len(next_line.lstrip(' '))
+                    indent = ' ' * indentation_count
+                    new_line = f'{indent}import time as waytomeasuretime\n{indent}waytomeasuretimestart = waytomeasuretime.time()'
+                    new_code.append(new_line)
+
+            elif re.match(while_pattern, content):
+                if i < len(code_splitted) - 1:
+                    next_line = code_splitted[i + 1]
+                    indentation_count = len(next_line) - len(next_line.lstrip(' '))
+                    indent = ' ' * indentation_count
+                    new_line = f'{indent}if waytomeasuretime.time() - waytomeasuretimestart > {self.max_time}:\n{indent}     raise TimeoutError'
+                    new_code.append(new_line)
+
+        return '\n'.join(new_code)
     
     def average(self, of, num_instances):
         if not self.evaluated:
