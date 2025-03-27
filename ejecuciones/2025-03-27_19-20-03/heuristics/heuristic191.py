@@ -1,0 +1,79 @@
+
+def heuristic(input_data):
+    """Hybrid heuristic minimizing makespan and balancing machine load."""
+    n_jobs = input_data['n_jobs']
+    n_machines = input_data['n_machines']
+    jobs = input_data['jobs']
+
+    schedule = {}
+    machine_time = {m: 0 for m in range(n_machines)}
+    machine_load = {m: 0 for m in range(n_machines)}
+    job_completion_time = {j: 0 for j in range(1, n_jobs + 1)}
+    job_remaining_times = {}
+
+    for job, operations in jobs.items():
+        total_time = sum(min(times) for machines, times in operations)
+        job_remaining_times[job] = total_time
+
+    job_ops = {job: 0 for job in jobs}
+    priority_list = []
+
+    # Initial priority: shortest remaining time + earliest machine availability
+    for job in jobs:
+        ops = jobs[job]
+        machines, times = ops[0]
+        min_time = min(times)
+        priority = (job_remaining_times[job]/ n_jobs) + (job/n_jobs)
+        priority_list.append((priority, job))
+    priority_list.sort()
+
+    while priority_list:
+        priority, job = priority_list.pop(0)
+
+        if job not in schedule:
+            schedule[job] = []
+
+        op_idx = job_ops[job]
+        machines, times = jobs[job][op_idx]
+
+        best_machine = None
+        min_start_time = float('inf')
+        best_time = None
+
+        for m, t in zip(machines, times):
+            start_time = max(machine_time[m], job_completion_time[job])
+            load_penalty = machine_load[m] / sum(machine_load.values()) if sum(machine_load.values()) > 0 else 0
+            adjusted_start_time = start_time + load_penalty
+
+            if adjusted_start_time < min_start_time:
+                min_start_time = adjusted_start_time
+                best_machine = m
+                best_time = t
+
+        if best_machine is None:
+            raise ValueError("No machine available for the operations")
+        start_time = max(machine_time[best_machine], job_completion_time[job])
+        end_time = start_time + best_time
+
+        schedule[job].append({
+            'Operation': op_idx + 1,
+            'Assigned Machine': best_machine,
+            'Start Time': start_time,
+            'End Time': end_time,
+            'Processing Time': best_time
+        })
+
+        machine_time[best_machine] = end_time
+        machine_load[best_machine] += best_time
+        job_completion_time[job] = end_time
+        job_remaining_times[job] -= best_time
+
+        job_ops[job] += 1
+
+        if job_ops[job] < len(jobs[job]):
+            next_machines, next_times = jobs[job][job_ops[job]]
+            priority = (job_remaining_times[job]/ n_jobs)+ (job/n_jobs)
+            priority_list.append((priority, job))
+            priority_list.sort()
+
+    return schedule

@@ -1,0 +1,12 @@
+{
+    "total heuristics": 130,
+    "correct heuristics": 115,
+    "incorrect heuristics": 1,
+    "infeasible heuristics": 14,
+    "repaired heuristics": 0,
+    "time": 1022.2617607116699,
+    "total petitions": 180,
+    "total input tokens": 324971,
+    "total output tokens": 103802,
+    "k": "[3, 3, 4, 4, 2, 2, 3, 2, 2, 2]"
+}

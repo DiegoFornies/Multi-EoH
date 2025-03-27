@@ -1,0 +1,11 @@
+{
+    "population size": 10,
+    "problem name": "jssp",
+    "max evolutions": 10,
+    "a": 10,
+    "b": 0.4,
+    "explorative initial probability": 0.8,
+    "intense initial probability": 0.2,
+    "mutation": 0.1,
+    "reflection": false
+}
